@@ -322,7 +322,16 @@ def _format_refined_chart_response(d1_chart):
         })
 
     return {
-        "grahas": graha_table,
+        "Ascendant (Lagna)": graha_table[0] if graha_table else {},
+        "Sun": graha_table[1] if len(graha_table) > 1 else {},
+        "Moon": graha_table[2] if len(graha_table) > 2 else {},
+        "Mars": graha_table[3] if len(graha_table) > 3 else {},
+        "Mercury": graha_table[4] if len(graha_table) > 4 else {},
+        "Jupiter": graha_table[5] if len(graha_table) > 5 else {},
+        "Venus": graha_table[6] if len(graha_table) > 6 else {},
+        "Saturn": graha_table[7] if len(graha_table) > 7 else {},
+        "Rahu": graha_table[8] if len(graha_table) > 8 else {},
+        "Ketu": graha_table[9] if len(graha_table) > 9 else {},
         "ayanamsa": round(d1_chart.ayanamsa, 6)
     }
 
