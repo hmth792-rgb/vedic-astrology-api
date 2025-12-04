@@ -2,11 +2,12 @@
 Astrology API - D1 Chart Calculator
 Professional API for generating D1 Rashi charts using Swiss Ephemeris
 """
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from marshmallow import ValidationError
 import traceback
 import os
 import sys
+import json
 
 # Add project root to Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -157,10 +158,15 @@ def calculate_d1_chart_refined():
         # Convert to refined response format
         response = _format_refined_chart_response(d1_chart)
         
-        return jsonify({
+        # Return with Response to preserve dictionary order
+        result = {
             "status": "success",
             "data": response
-        })
+        }
+        return Response(
+            json.dumps(result, ensure_ascii=False),
+            mimetype='application/json'
+        )
         
     except Exception as e:
         app.logger.error(f"Error calculating refined D1 chart: {str(e)}")
@@ -309,17 +315,18 @@ def _format_refined_chart_response(d1_chart):
         else:
             rel_word = planet_pos.relationship
 
-        graha_table.append({
-            "Graha": f"{symbol}{planet_pos.planet.name.title()}{retrograde_symbol}",
-            "Longitude": format_longitude_dms(planet_pos.longitude, planet_pos.sign),
-            "Nakshatra": f"{planet_pos.nakshatra.name.replace('_', ' ').title()} {planet_pos.nakshatra_pada}",
-            "Lord/Sub Lord": lord_sub_lord,
-            "Ruler of": ruler_of,
-            "Is In": planet_pos.is_in_house if planet_pos.is_in_house else "-",
-            "B. Owner": planet_pos.house_owner.name if planet_pos.house_owner else "-",
-            "Relationship": rel_word,
-            "Dignities": planet_pos.dignity if planet_pos.dignity else "-"
-        })
+        # Create ordered dict with exact field sequence
+        graha_dict = {}
+        graha_dict["Graha"] = f"{symbol}{planet_pos.planet.name.title()}{retrograde_symbol}"
+        graha_dict["Longitude"] = format_longitude_dms(planet_pos.longitude, planet_pos.sign)
+        graha_dict["Nakshatra"] = f"{planet_pos.nakshatra.name.replace('_', ' ').title()} {planet_pos.nakshatra_pada}"
+        graha_dict["Lord/Sub Lord"] = lord_sub_lord
+        graha_dict["Ruler of"] = ruler_of
+        graha_dict["Is In"] = planet_pos.is_in_house if planet_pos.is_in_house else "-"
+        graha_dict["B. Owner"] = planet_pos.house_owner.name if planet_pos.house_owner else "-"
+        graha_dict["Relationship"] = rel_word
+        graha_dict["Dignities"] = planet_pos.dignity if planet_pos.dignity else "-"
+        graha_table.append(graha_dict)
 
     return {
         "Ascendant (Lagna)": graha_table[0] if graha_table else {},
