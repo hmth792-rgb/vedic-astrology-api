@@ -1,0 +1,7 @@
+flask==3.0.0
+gunicorn==21.2.0
+pyephem==9.99
+pyswisseph==2.10.3.2
+pytz==2023.3
+python-dateutil==2.8.2
+marshmallow==3.20.1
