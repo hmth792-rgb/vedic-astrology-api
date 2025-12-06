@@ -262,6 +262,12 @@ class D1ChartCalculator:
         sun_pos = next(p for p in planets if p.planet == Planet.SUN)
         moon_pos = next(p for p in planets if p.planet == Planet.MOON)
         
+        # Get sign names
+        sun_sign_name = sun_pos.sign.name.title()
+        sun_sign_sanskrit = self.vedic_helper.get_sign_sanskrit_name(sun_pos.sign)
+        moon_sign_name = moon_pos.sign.name.title()
+        moon_sign_sanskrit = self.vedic_helper.get_sign_sanskrit_name(moon_pos.sign)
+        
         # Calculate moon phase (simplified)
         moon_sun_angle = abs(moon_pos.longitude - sun_pos.longitude)
         if moon_sun_angle > 180:
@@ -292,7 +298,11 @@ class D1ChartCalculator:
             sun_strength=sun_strength,
             moon_strength=moon_strength,
             moon_phase=moon_phase,
-            tithi=tithi
+            tithi=tithi,
+            sun_sign=sun_sign_name,
+            sun_sign_sanskrit=sun_sign_sanskrit,
+            moon_sign=moon_sign_name,
+            moon_sign_sanskrit=moon_sign_sanskrit
         )
     
     def _calculate_planet_strength(self, planet_pos: PlanetPosition) -> float:

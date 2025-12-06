@@ -142,6 +142,10 @@ class SunMoonShine:
     moon_strength: float # 0-100 percentage
     moon_phase: str      # New, Waxing, Full, Waning
     tithi: int          # Lunar day (1-30)
+    sun_sign: Optional[str] = None  # Sign name (Virgo)
+    sun_sign_sanskrit: Optional[str] = None  # Sanskrit name (Kanya)
+    moon_sign: Optional[str] = None  # Sign name (Pisces)
+    moon_sign_sanskrit: Optional[str] = None  # Sanskrit name (Meena)
 
 
 @dataclass

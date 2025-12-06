@@ -227,6 +227,11 @@ class VedicAstrologyHelper:
         return names.get(sign, sign.name)
 
     @staticmethod
+    def get_sign_sanskrit_name(sign: Zodiac) -> str:
+        """Get Sanskrit name for sign (alias for get_sign_short_name)"""
+        return VedicAstrologyHelper.get_sign_short_name(sign)
+
+    @staticmethod
     def get_sanskrit_planet_name(planet: Planet) -> str:
         """Return common Sanskrit-style planet name (Shukra, Budha, etc.)"""
         names = {
