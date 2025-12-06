@@ -203,15 +203,7 @@ def _format_refined_chart_response(d1_chart):
             "Ketu": graha_table[9] if len(graha_table) > 9 else {},
             "Sunshine and Moonshine": {
                 "Sun Sign": f"{d1_chart.sun_moon_shine.sun_sign} ({d1_chart.sun_moon_shine.sun_sign_sanskrit} Rashi)",
-                "Moon Sign": f"{d1_chart.sun_moon_shine.moon_sign} ({d1_chart.sun_moon_shine.moon_sign_sanskrit} Rashi)",
-                "Sunrise": d1_chart.sun_moon_shine.sunrise_time,
-                "Sunset": d1_chart.sun_moon_shine.sunset_time,
-                "Moonrise": d1_chart.sun_moon_shine.moonrise_time,
-                "Moonset": d1_chart.sun_moon_shine.moonset_time,
-                "Sun Strength": f"{d1_chart.sun_moon_shine.sun_strength:.2f}%",
-                "Moon Strength": f"{d1_chart.sun_moon_shine.moon_strength:.2f}%",
-                "Moon Phase": d1_chart.sun_moon_shine.moon_phase,
-                "Tithi": d1_chart.sun_moon_shine.tithi
+                "Moon Sign": f"{d1_chart.sun_moon_shine.moon_sign} ({d1_chart.sun_moon_shine.moon_sign_sanskrit} Rashi)"
             },
             "ayanamsa": round(d1_chart.ayanamsa, 6)
         }

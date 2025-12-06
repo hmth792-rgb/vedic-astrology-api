@@ -154,7 +154,8 @@ def _format_refined_d9_response(d9_data):
     graha_dict = {}
     graha_dict["Graha"] = "Lagna (D9)"
     graha_dict["Longitude"] = format_longitude_dms(d9_lagna.longitude, d9_lagna.sign)
-    graha_dict["Nakshatra"] = f"{d9_lagna.nakshatra.name.replace('_', ' ').title()} {d9_lagna.nakshatra_pada}"
+    graha_dict["Nakshatra"] = f"{d9_lagna.nakshatra.name.replace('_', ' ').title()}"
+    graha_dict["Nakshatra Pada"] = d9_lagna.nakshatra_pada
     graha_dict["Lord/Sub Lord"] = lagna_lord_field
     graha_dict["Ruler of"] = "-"
     graha_dict["Is In"] = 1
@@ -196,7 +197,8 @@ def _format_refined_d9_response(d9_data):
         graha_dict = {}
         graha_dict["Graha"] = f"{symbol}{planet_pos.planet.name.title()}{retrograde_symbol}"
         graha_dict["Longitude"] = format_longitude_dms(planet_pos.longitude, planet_pos.sign)
-        graha_dict["Nakshatra"] = f"{planet_pos.nakshatra.name.replace('_', ' ').title()} {planet_pos.nakshatra_pada}"
+        graha_dict["Nakshatra"] = f"{planet_pos.nakshatra.name.replace('_', ' ').title()}"
+        graha_dict["Nakshatra Pada"] = planet_pos.nakshatra_pada
         graha_dict["Lord/Sub Lord"] = lord_sub_lord
         graha_dict["Ruler of"] = ruler_of
         graha_dict["Is In"] = planet_pos.is_in_house if planet_pos.is_in_house else "-"
@@ -218,8 +220,7 @@ def _format_refined_d9_response(d9_data):
             "Venus": graha_table[6] if len(graha_table) > 6 else {},
             "Saturn": graha_table[7] if len(graha_table) > 7 else {},
             "Rahu": graha_table[8] if len(graha_table) > 8 else {},
-            "Ketu": graha_table[9] if len(graha_table) > 9 else {},
-            "ayanamsa": round(d9_data["ayanamsa"], 6)
+            "Ketu": graha_table[9] if len(graha_table) > 9 else {}
         }
     }
 
