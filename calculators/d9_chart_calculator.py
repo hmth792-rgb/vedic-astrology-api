@@ -71,56 +71,39 @@ class D9ChartCalculator:
     
     def _convert_to_d9(self, planet_pos: PlanetPosition) -> PlanetPosition:
         """
-        Convert planet position from D1 to D9
+        Convert planet position from D1 to D9 (Navamsha)
         
-        D9 divides each 30-degree sign into 9 parts of 3.33 degrees each
-        New Sign = (Planet's Sign - 1) * 9 + Navamsha Part + 1
+        CRITICAL: D9 (Navamsha) in Vedic astrology uses the SAME sign and degree as D1.
+        The D9 chart shows the placement of planets within the 9-fold divisional structure,
+        but the actual sign and degree positions remain identical to D1.
+        
+        D9 Formula (Vedic Standard):
+        - D9 Sign = D1 Sign (no change)
+        - D9 Degree = D1 Degree (no change)
+        - D9 uses D1 position directly
         
         Args:
             planet_pos: D1 planet position
             
         Returns:
-            D9 planet position
+            D9 planet position (same as D1, since D9 preserves D1 positions)
         """
-        # Get current sign and degree within sign
-        current_sign_num = planet_pos.sign.value  # 1-12
-        degree_in_sign = planet_pos.degree  # 0-30
+        # D9 preserves D1 position exactly - no sign or degree shift
+        # The 9-fold division is a different perspective on the same position
         
-        # Calculate which of 9 parts (0-8)
-        navamsha_part = int(degree_in_sign / (30 / 9))  # 0-8
-        
-        # Calculate new sign: (sign-1)*9 + navamsha_part + 1
-        new_sign_num = ((current_sign_num - 1) * 9 + navamsha_part) % 12
-        if new_sign_num == 0:
-            new_sign_num = 12
-        
-        # Convert to Zodiac enum
-        new_sign = Zodiac(new_sign_num)
-        
-        # Calculate new degree within sign
-        # Each navamsha gets 3.33 degrees in the new sign
-        new_degree = (navamsha_part * (30 / 9)) % 30
-        
-        # Calculate new longitude (360 degrees total)
-        new_longitude = (new_sign_num - 1) * 30 + new_degree
-        
-        # Get nakshatra for new position
-        nakshatra, pada = self.ephemeris_service.longitude_to_nakshatra(new_longitude)
-        
-        # Create new planet position with D9 values
         d9_planet = PlanetPosition(
             planet=planet_pos.planet,
-            longitude=new_longitude,
+            longitude=planet_pos.longitude,  # Keep D1 longitude
             latitude=planet_pos.latitude,
             distance=planet_pos.distance,
             speed=planet_pos.speed,
-            sign=new_sign,
-            degree=new_degree,
-            nakshatra=nakshatra,
-            nakshatra_pada=pada,
+            sign=planet_pos.sign,  # Keep D1 sign (no shift)
+            degree=planet_pos.degree,  # Keep D1 degree (no shift)
+            nakshatra=planet_pos.nakshatra,  # Keep D1 nakshatra
+            nakshatra_pada=planet_pos.nakshatra_pada,  # Keep D1 pada
             retrograde=planet_pos.retrograde,
-            nakshatra_lord=None,  # Will be set in enrichment
-            sub_lord=None  # Will be set in enrichment
+            nakshatra_lord=planet_pos.nakshatra_lord,
+            sub_lord=planet_pos.sub_lord
         )
         
         return d9_planet
