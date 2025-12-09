@@ -247,7 +247,8 @@ class VedicAstrologyHelper:
         }
         return names.get(planet, planet.name.title())
 
-    def get_sub_lord(self, absolute_longitude: float, nakshatra_lord: Planet) -> Planet:
+    def get_sub_lord(self, absolute_longitude: float, nakshatra_lord: Planet,
+                     ephe_service=None, epsilon: float = 0.0) -> Planet:
         """
         Compute KP sub-lord based on Vimshottari order segmented within a nakshatra.
         - Each nakshatra spans 13°20' (13.333333 degrees)
@@ -257,17 +258,18 @@ class VedicAstrologyHelper:
         # Determine position inside nakshatra (0 to 13.333333)
         # Nakshatra boundaries start at 0 Aries and continue
         segment_span = 13.333333
-        # Find the start degree of the current nakshatra
+        # Use provided ephemeris service or create one
         from services.swiss_ephemeris_service import SwissEphemerisService
-        svc = SwissEphemerisService()
+        svc = ephe_service if ephe_service is not None else SwissEphemerisService()
+        abs_long = absolute_longitude + (epsilon or 0.0)
         nak = None
         for n in svc.nakshatras:
-            if n["start"] <= absolute_longitude < n["end"]:
+            if n["start"] <= abs_long < n["end"]:
                 nak = n
                 break
         if not nak:
             return nakshatra_lord
-        pos_in_nak = absolute_longitude - nak["start"]
+        pos_in_nak = abs_long - nak["start"]
 
         # Build order starting from nakshatra lord
         order = []

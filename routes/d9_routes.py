@@ -5,7 +5,6 @@ Used for marriage, relationships, and partnerships analysis
 """
 from flask import Blueprint, request, jsonify, Response
 from marshmallow import ValidationError
-import traceback
 import json
 
 from models.astrology_models import UserDetails, Planet
@@ -19,8 +18,6 @@ d9_bp = Blueprint('d9', __name__, url_prefix='/api/v1')
 
 # Initialize
 user_schema = UserDetailsSchema()
-d1_calculator = D1ChartCalculator(ephe_path="./ephe")
-d9_calculator = D9ChartCalculator(ephe_path="./ephe")
 
 
 @d9_bp.route('/d9-chart', methods=['POST'])
@@ -48,6 +45,11 @@ def calculate_d9_chart():
                 "status": "error"
             }), 400
         
+        # Extract optional sidereal_mode before validation
+        sidereal_mode = None
+        if isinstance(json_data, dict) and 'sidereal_mode' in json_data:
+            sidereal_mode = json_data.pop('sidereal_mode')
+
         try:
             validated_data = user_schema.load(json_data)
         except ValidationError as err:
@@ -56,15 +58,21 @@ def calculate_d9_chart():
                 "details": err.messages,
                 "status": "error"
             }), 400
-        
+
         user_details = UserDetails(**validated_data)
-        
+
+        # Instantiate calculators with the requested sidereal_mode
+        d1_calculator = D1ChartCalculator(ephe_path="./ephe", node_rulership_strategy="drik_compat",
+                                         nakshatra_epsilon=1e-6, sidereal_mode=sidereal_mode)
+        d9_calculator = D9ChartCalculator(ephe_path="./ephe", node_rulership_strategy="drik_compat",
+                                         nakshatra_epsilon=1e-6, sidereal_mode=sidereal_mode)
+
         # Calculate D1 first
         d1_chart = d1_calculator.calculate_d1_chart(user_details)
-        
+
         # Calculate D9 using D1
         d9_data = d9_calculator.calculate_d9_chart(user_details, d1_chart)
-        
+
         response = _format_full_d9_response(d9_data)
         
         return Response(
@@ -96,6 +104,11 @@ def calculate_d9_chart_refined():
                 "status": "error"
             }), 400
         
+        # Extract optional sidereal_mode before validation
+        sidereal_mode = None
+        if isinstance(json_data, dict) and 'sidereal_mode' in json_data:
+            sidereal_mode = json_data.pop('sidereal_mode')
+
         try:
             validated_data = user_schema.load(json_data)
         except ValidationError as err:
@@ -104,15 +117,19 @@ def calculate_d9_chart_refined():
                 "details": err.messages,
                 "status": "error"
             }), 400
-        
+
         user_details = UserDetails(**validated_data)
-        
-        # Calculate D1 first
+
+        # Instantiate calculators with the requested sidereal_mode
+        d1_calculator = D1ChartCalculator(ephe_path="./ephe", node_rulership_strategy="drik_compat",
+                                         nakshatra_epsilon=1e-6, sidereal_mode=sidereal_mode)
+        d9_calculator = D9ChartCalculator(ephe_path="./ephe", node_rulership_strategy="drik_compat",
+                                         nakshatra_epsilon=1e-6, sidereal_mode=sidereal_mode)
+
+        # Calculate D1 then D9
         d1_chart = d1_calculator.calculate_d1_chart(user_details)
-        
-        # Calculate D9 using D1
         d9_data = d9_calculator.calculate_d9_chart(user_details, d1_chart)
-        
+
         response = _format_refined_d9_response(d9_data)
         
         return Response(
@@ -148,7 +165,9 @@ def _format_refined_d9_response(d9_data):
     d9_lagna = d9_data["d9_lagna"]
     lagna_nak_entry = next((n for n in ephe_service.nakshatras if n["name"] == d9_lagna.nakshatra), None)
     lagna_nak_lord = lagna_nak_entry["ruler"] if lagna_nak_entry else d9_data["d9_houses"][0].ruler_planet
-    lagna_sub_lord = helper.get_sub_lord(d9_lagna.longitude, lagna_nak_lord)
+    lagna_sub_lord = helper.get_sub_lord(d9_lagna.longitude, lagna_nak_lord,
+                                         ephe_service=ephe_service,
+                                         epsilon=1e-6)
     lagna_lord_field = f"{helper.get_sanskrit_planet_name(lagna_nak_lord)}, {helper.get_sanskrit_planet_name(lagna_sub_lord)}"
 
     graha_dict = {}

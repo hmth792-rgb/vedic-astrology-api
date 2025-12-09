@@ -4,7 +4,6 @@ All D1 (Rashi/Birth chart) related endpoints
 """
 from flask import Blueprint, request, jsonify, Response
 from marshmallow import ValidationError
-import traceback
 import json
 
 from models.astrology_models import UserDetails, Planet
@@ -17,7 +16,7 @@ d1_bp = Blueprint('d1', __name__, url_prefix='/api/v1')
 
 # Initialize
 user_schema = UserDetailsSchema()
-calculator = D1ChartCalculator(ephe_path="./ephe")
+
 
 
 @d1_bp.route('/d1-chart', methods=['POST'])
@@ -44,6 +43,11 @@ def calculate_d1_chart():
                 "status": "error"
             }), 400
         
+        # Extract optional sidereal_mode before validation to avoid schema 'Unknown field' errors
+        sidereal_mode = None
+        if isinstance(json_data, dict) and 'sidereal_mode' in json_data:
+            sidereal_mode = json_data.pop('sidereal_mode')
+
         try:
             validated_data = user_schema.load(json_data)
         except ValidationError as err:
@@ -52,11 +56,14 @@ def calculate_d1_chart():
                 "details": err.messages,
                 "status": "error"
             }), 400
-        
+
         user_details = UserDetails(**validated_data)
+        # sidereal_mode was already popped above during validation
+        calculator = D1ChartCalculator(ephe_path="./ephe", node_rulership_strategy="drik_compat",
+                                       nakshatra_epsilon=1e-6, sidereal_mode=sidereal_mode)
         d1_chart = calculator.calculate_d1_chart(user_details)
         response = _format_full_chart_response(d1_chart)
-        
+
         return Response(
             json.dumps(response, ensure_ascii=False),
             mimetype='application/json'
@@ -86,6 +93,11 @@ def calculate_d1_chart_refined():
                 "status": "error"
             }), 400
         
+        # Extract optional sidereal_mode before validation to avoid schema 'Unknown field' errors
+        sidereal_mode = None
+        if isinstance(json_data, dict) and 'sidereal_mode' in json_data:
+            sidereal_mode = json_data.pop('sidereal_mode')
+
         try:
             validated_data = user_schema.load(json_data)
         except ValidationError as err:
@@ -94,8 +106,11 @@ def calculate_d1_chart_refined():
                 "details": err.messages,
                 "status": "error"
             }), 400
-        
+
         user_details = UserDetails(**validated_data)
+        # sidereal_mode was already popped above during validation
+        calculator = D1ChartCalculator(ephe_path="./ephe", node_rulership_strategy="drik_compat",
+                                       nakshatra_epsilon=1e-6, sidereal_mode=sidereal_mode)
         d1_chart = calculator.calculate_d1_chart(user_details)
         response = _format_refined_chart_response(d1_chart)
         
@@ -131,7 +146,9 @@ def _format_refined_chart_response(d1_chart):
     # Add Lagna first
     lagna_nak_entry = next((n for n in ephe_service.nakshatras if n["name"] == d1_chart.lagna.nakshatra), None)
     lagna_nak_lord = lagna_nak_entry["ruler"] if lagna_nak_entry else d1_chart.houses[0].ruler_planet
-    lagna_sub_lord = helper.get_sub_lord(d1_chart.lagna.longitude, lagna_nak_lord)
+    lagna_sub_lord = helper.get_sub_lord(d1_chart.lagna.longitude, lagna_nak_lord,
+                                         ephe_service=ephe_service,
+                                         epsilon=1e-6)
     lagna_lord_field = f"{helper.get_sanskrit_planet_name(lagna_nak_lord)}, {helper.get_sanskrit_planet_name(lagna_sub_lord)}"
 
     graha_dict = {}

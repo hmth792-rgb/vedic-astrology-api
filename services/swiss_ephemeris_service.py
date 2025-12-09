@@ -22,6 +22,11 @@ class SwissEphemerisService:
         """
         self.ephe_path = ephe_path
         swe.set_ephe_path(ephe_path)
+        # Default sidereal mode constant name (string) and value
+        self.sidereal_mode_name = 'SIDM_LAHIRI'
+        self.sidereal_mode = getattr(swe, self.sidereal_mode_name, None)
+        if self.sidereal_mode is not None:
+            swe.set_sid_mode(self.sidereal_mode)
         
         # Planet mapping for Swiss Ephemeris
         self.planet_map = {
@@ -73,6 +78,43 @@ class SwissEphemerisService:
             {"name": Nakshatra.REVATI, "start": 346.666667, "end": 360, "ruler": Planet.MERCURY, "symbol": "Fish", "deity": "Pushan"}
         ]
         return nakshatras
+
+    def set_sidereal_mode(self, mode_name_or_const):
+        """
+        Set the sidereal mode for ayanamsa calculations.
+
+        mode_name_or_const can be either a string matching one of swisseph's
+        SIDM_* constants (e.g. 'LAHIRI' or 'SIDM_LAHIRI' or 'GALEQU_TRUE') or
+        the actual integer constant from the swe module.
+        """
+        # If an integer constant was passed, try setting directly
+        try:
+            if isinstance(mode_name_or_const, int):
+                swe.set_sid_mode(mode_name_or_const)
+                # find name if available
+                for name in dir(swe):
+                    if name.startswith('SIDM_') and getattr(swe, name) == mode_name_or_const:
+                        self.sidereal_mode_name = name
+                        break
+                self.sidereal_mode = mode_name_or_const
+                return True
+        except Exception:
+            pass
+
+        # Normalize string input
+        if isinstance(mode_name_or_const, str):
+            key = mode_name_or_const.upper()
+            # allow short names without SIDM_ prefix
+            if not key.startswith('SIDM_'):
+                key = 'SIDM_' + key
+            if hasattr(swe, key):
+                val = getattr(swe, key)
+                swe.set_sid_mode(val)
+                self.sidereal_mode_name = key
+                self.sidereal_mode = val
+                return True
+
+        return False
     
     def convert_to_julian_day(self, birth_datetime: str, timezone_offset: float) -> float:
         """
