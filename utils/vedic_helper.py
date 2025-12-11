@@ -216,6 +216,17 @@ class VedicAstrologyHelper:
         return f"{degrees:02d}° {sign.name.title()} {minutes:02d}′ {seconds:02d}″"
     
     @staticmethod
+    def get_sign_name(sign: Zodiac) -> str:
+        """Get English name for sign"""
+        names = {
+            Zodiac.ARIES: "Aries", Zodiac.TAURUS: "Taurus", Zodiac.GEMINI: "Gemini",
+            Zodiac.CANCER: "Cancer", Zodiac.LEO: "Leo", Zodiac.VIRGO: "Virgo",
+            Zodiac.LIBRA: "Libra", Zodiac.SCORPIO: "Scorpio", Zodiac.SAGITTARIUS: "Sagittarius",
+            Zodiac.CAPRICORN: "Capricorn", Zodiac.AQUARIUS: "Aquarius", Zodiac.PISCES: "Pisces"
+        }
+        return names.get(sign, sign.name)
+
+    @staticmethod
     def get_sign_short_name(sign: Zodiac) -> str:
         """Get short Sanskrit name for sign"""
         names = {

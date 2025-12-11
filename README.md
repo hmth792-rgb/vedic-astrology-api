@@ -1,538 +1,617 @@
-# Vedic Astrology Chart API# Astrology D1 Chart API
+# Vedic Astrology Chart API
 
+A comprehensive REST API for calculating Vedic astrology charts using Swiss Ephemeris. Get D1 (Rashi) birth charts, D9 (Navamsha) divisional charts, Mahadasha/Antardasha periods, and real-time planetary transits.
 
+**Version:** 3.0.0  
+**Base URL:** `http://127.0.0.1:5000`
 
-Professional REST API for generating divisional charts using Swiss Ephemeris and Vedic astrology calculations. Supports D1 (Rashi/Birth Chart) and D9 (Navamsha) with precise astronomical positioning and Drik Panchang compatibility.A professional Python Flask API for generating complete D1 (Rashi) charts using Swiss Ephemeris. This API calculates accurate astronomical data including planetary positions, houses, nakshatras, and sun/moon shine values.
+---
 
+## Quick Start
 
+```bash
+# Install dependencies
+pip install -r requirements.txt
 
-## Features## ✨ Features
-
-
-
-- **D1 (Rashi) Chart**: Complete birth chart with planetary positions, nakshatras, houses, and relationships- **Complete D1 Chart Calculation**: Full Rashi chart with all planetary positions
-
-- **D9 (Navamsha) Chart**: Divisional chart for marriage, relationships, and partnerships- **Swiss Ephemeris Integration**: High-precision astronomical calculations
-
-- **Vedic Calculations**: Nakshatra lords, sub-lords (KP system), house rulership, planet dignity, relationships- **Comprehensive Data**: Planetary positions, houses, nakshatras, lagna
-
-- **Configurable Ayanamsa**: Multiple sidereal modes (Lahiri, Galactic Equatorial, Raman, etc.)- **Sun/Moon Shine**: Sunrise, sunset, moon phases, and tithi calculations
-
-- **Drik Panchang Compatible**: Node rulership mapping matches Drik Panchang conventions- **Professional API**: RESTful endpoints with proper validation
-
-- **Production Ready**: Clean, modular architecture with proper error handling- **Modular Architecture**: Clean, reusable, and extensible code structure
-
-- **Input Validation**: Robust validation using Marshmallow schemas
-
-## Installation- **Error Handling**: Comprehensive error handling and logging
-
-
-
-### Prerequisites## 🏗️ Project Structure
-
-
-
-- Python 3.8+```
-
-- Swiss Ephemeris data files (included in `/ephe` directory)Python/
-
-├── app.py                          # Main Flask application
-
-### Setup├── requirements.txt                # Python dependencies
-
-├── README.md                      # This file
-
-```bash├── .deployment                    # Azure deployment config
-
-# Install dependencies│
-
-pip install -r requirements.txt├── models/                        # Data models and schemas
-
-│   ├── __init__.py
-
-# Run development server│   ├── astrology_models.py        # Core astrology data models
-
-python app.py│   └── validation_schemas.py      # Input validation schemas
-
-│
-
-# Production server with Gunicorn├── services/                      # Business logic layer
-
-gunicorn -w 4 -b 0.0.0.0:5000 app:app│   ├── __init__.py
-
-```│   └── swiss_ephemeris_service.py # Swiss Ephemeris integration
-
-│
-
-The API will be available at `http://localhost:5000`├── calculators/                   # Chart calculation engines
-
-│   ├── __init__.py
-
-## API Endpoints│   └── d1_chart_calculator.py     # Main D1 chart calculator
-
-│
-
-### D1 Chart (Rashi / Birth Chart)└── ephe/                          # Swiss Ephemeris data files
-
-    └── README.md                  # Instructions for ephemeris files
-
-**Full Response:**```
-
-```
-
-POST /api/v1/d1-chart## 🚀 Installation & Setup
-
-```
-
-### 1. Install Dependencies
-
-**Refined Response (Recommended):**
-
-``````bash
-
-POST /api/v1/d1-chart-refinedpip install -r requirements.txt
-
-``````
-
-Returns simplified graha table with essential fields.
-
-### 2. Set up Swiss Ephemeris Data
-
-### D9 Chart (Navamsha / Divisional Chart)
-
-The API requires Swiss Ephemeris data files for accurate calculations:
-
-**Full Response:**
-
-```1. Download ephemeris files from: https://www.astro.com/ftp/swisseph/ephe/
-
-POST /api/v1/d9-chart2. Place files in the `ephe/` directory
-
-```3. Minimum required: `semo_18.se1` (covers 1800-2399)
-
-
-
-**Refined Response (Recommended):****Quick setup option:**
-
-``````python
-
-POST /api/v1/d9-chart-refinedimport swisseph as swe
-
-```swe.set_ephe_path('./ephe')  # Auto-downloads needed files
-
-Returns simplified D9 graha table with same fields as D1 refined.```
-
-
-
-## Request Format### 3. Run the API
-
-
-
-All POST requests require the following JSON body:```bash
-
+# Run the server
 python app.py
 
-```json```
+# Server will start on http://127.0.0.1:5000
+```
 
+---
+
+## API Routes Overview
+
+| # | Route | Method | Type | Purpose |
+|---|-------|--------|------|---------|
+| 1 | `/api/v1/d1-chart-refined` | POST | **Birth Chart** | Calculate D1 (Rashi) birth chart with planetary positions |
+| 2 | `/api/v1/d9-chart-refined` | POST | **Divisional Chart** | Calculate D9 (Navamsha) marriage/relationship chart |
+| 3 | `/api/v1/dasha` | POST | **Periods** | Get Mahadasha/Antardasha periods (flexible: year/month/day/range) |
+| 4 | `/api/v1/transits` | POST | **Transits** | Get current transits of all 7 major planets through natal houses |
+| 5 | `/api/v1/transits/major` | POST | **Transits** | Get transits of Saturn, Jupiter, Mercury only |
+| 6 | `/` | GET | **Info** | API welcome & endpoints list |
+| 7 | `/health` | GET | **Health** | Server health check |
+| 8 | `/docs` | GET | **Documentation** | Detailed API documentation |
+
+---
+
+## Common Request Body (All POST Routes)
+
+All POST endpoints accept the same birth details format:
+
+```json
 {
-
-  "name": "Full Name",The API will be available at `http://localhost:5000`
-
+  "name": "Hemant Rathore",
   "datetime": "1987-05-04T19:43:00",
-
-  "latitude": 26.14093550,## 📡 API Endpoints
-
-  "longitude": 91.79102650,
-
-  "timezone": 5.5,### 🏠 Home - `GET /`
-
-  "place": "City Name",Welcome message and API overview
-
-  "religion": "Hindu",
-
-  "sidereal_mode": "SIDM_GALEQU_TRUE"### 💊 Health Check - `GET /health`
-
-}Service health status
-
+  "latitude": 26.14,
+  "longitude": 91.79,
+  "timezone": 5.5,
+  "place": "Dispur"
+}
 ```
 
-### 📜 Documentation - `GET /docs`
+### Parameters:
+- **name** (string, required): Person's full name
+- **datetime** (string, required): Birth date/time in ISO format: `YYYY-MM-DDTHH:MM:SS`
+- **latitude** (float, required): Birth location latitude (-90 to 90)
+- **longitude** (float, required): Birth location longitude (-180 to 180)
+- **timezone** (float, required): Timezone offset from UTC (e.g., 5.5 for IST, -5 for EST)
+- **place** (string, required): Birth place name
 
-### Field DescriptionsComplete API documentation
+---
 
+## Route Details
 
+### 1️⃣ D1 Chart - Birth Chart Refined
 
-| Field | Type | Required | Description |### 🔮 Calculate D1 Chart - `POST /api/v1/d1-chart`
+**Endpoint:** `POST /api/v1/d1-chart-refined`
 
-|-------|------|----------|-------------|
+**Description:** Calculates the D1 (Rashi) natal chart showing planetary positions in zodiac signs and houses. Returns the natal ascendant, all planets, their nakshatras, and includes Sun & Moon Rashi names (English + Sanskrit).
 
-| name | string | ✓ | Full name of the native |Calculate a complete D1 Rashi chart for given birth details.
-
-| datetime | string (ISO 8601) | ✓ | Birth datetime: `YYYY-MM-DDTHH:MM:SS` |
-
-| latitude | float | ✓ | Birth latitude (-90 to 90) |**Request Body:**
-
-| longitude | float | ✓ | Birth longitude (-180 to 180) |```json
-
-| timezone | float | ✓ | Timezone offset in hours (e.g., 5.5 for IST, -5 for EST) |{
-
-| place | string | ✓ | Birth place/city name |    "name": "John Doe",
-
-| religion | string | ✗ | Religion (optional) |    "datetime": "1990-01-15T14:30:00",
-
-| sidereal_mode | string | ✗ | Ayanamsa mode (optional, default: Lahiri) |    "latitude": 28.6139,
-
-    "longitude": 77.2090,
-
-## Example Request (cURL)    "timezone": "Asia/Kolkata",
-
-    "place": "New Delhi, India",
-
-```bash    "religion": "Hindu"
-
-curl -X POST 'http://localhost:5000/api/v1/d1-chart-refined' \}
-
-  -H 'Content-Type: application/json' \```
-
-  -d '{
-
-    "name": "Hemant Rathore",**Response:**
-
-    "datetime": "1987-05-04T19:43:00",```json
-
-    "latitude": 26.14093550,{
-
-    "longitude": 91.79102650,    "status": "success",
-
-    "timezone": 5.5,    "data": {
-
-    "place": "Dispur",        "user_details": { ... },
-
-    "religion": "Hindu"        "lagna": {
-
-  }'            "planet": "SUN",
-
-```            "longitude": 285.123456,
-
-            "sign": "CAPRICORN",
-
-## Example Response            "degree": 15.123456,
-
-            "nakshatra": "UTTARA_ASHADHA",
-
-```json            "nakshatra_pada": 2,
-
-{            "retrograde": false
-
-  "status": "success",        },
-
-  "data": {        "planets": [ ... ],
-
-    "Ascendant (Lagna)": {        "houses": [ ... ],
-
-      "Graha": "Lagna",        "nakshatra_details": [ ... ],
-
-      "Longitude": "07° Vish 03′ 34″",        "sun_moon_shine": {
-
-      "Nakshatra": "Anuradha 2",            "sunrise_time": "2025-11-28T06:45:30",
-
-      "Lord/Sub Lord": "Shani, Budha",            "sunset_time": "2025-11-28T18:15:45",
-
-      "Ruler of": "-",            "sun_strength": 85.5,
-
-      "Is In": 1,            "moon_strength": 72.3,
-
-      "B. Owner": "Mangal",            "moon_phase": "Waxing",
-
-      "Relationship": "-",            "tithi": 8
-
-      "Dignities": "-"        },
-
-    },        "ayanamsa": 24.123456,
-
-    "Sun": {        "calculation_time": "2025-11-28T12:30:00.000Z"
-
-      "Graha": "☉Surya",    }
-
-      "Longitude": "29° Kany 08′ 39″",}
-
-      "Nakshatra": "Chitra 2",```
-
-      "Lord/Sub Lord": "Mangal, Shani",
-
-      "Ruler of": "10, 11",## 🔧 Input Parameters
-
-      "Is In": 10,
-
-      "B. Owner": "Budha",| Parameter | Type | Required | Description |
-
-      "Relationship": "Neutral",|-----------|------|----------|-------------|
-
-      "Dignities": "-"| `name` | string | ✅ | Full name (1-100 chars) |
-
-    },| `datetime` | string | ✅ | Birth datetime (ISO: YYYY-MM-DDTHH:MM:SS) |
-
-    "ayanamsa": 29.898276| `latitude` | float | ✅ | Birth latitude (-90 to 90) |
-
-  }| `longitude` | float | ✅ | Birth longitude (-180 to 180) |
-
-}| `timezone` | string | ✅ | Timezone (e.g., "Asia/Kolkata") |
-
-```| `place` | string | ✅ | Birth place name (1-200 chars) |
-
-| `religion` | string | ❌ | Religion (optional, max 50 chars) |
-
-## Response Fields Explained
-
-## 📊 Output Data
-
-| Field | Description |
-
-|-------|-------------|### Lagna (Ascendant)
-
-| Graha | Planet symbol and name |- Longitude and degree position
-
-| Longitude | Degree, minutes, seconds with zodiac sign |- Zodiac sign and nakshatra
-
-| Nakshatra | Lunar mansion and pada (1-4) |- Nakshatra pada (quarter)
-
-| Lord/Sub Lord | Nakshatra lord and KP sub-lord |
-
-| Ruler of | House numbers this planet rules |### Planetary Positions
-
-| Is In | House number where planet is located |For each planet (Sun, Moon, Mercury, Venus, Mars, Jupiter, Saturn, Rahu, Ketu):
-
-| B. Owner | Birth house owner (house ruler) |- Precise longitude/latitude coordinates
-
-| Relationship | Relationship with house owner (Own House, Friend's House, Enemy's House, Neutral) |- Zodiac sign and degree within sign
-
-| Dignities | Planet dignity status (Exalted, Own Sign, Debilitated, etc.) |- Nakshatra and pada
-
-- Retrograde status
-
-## Ayanamsa Modes- Speed and distance
-
-
-
-The API supports multiple ayanamsa systems. Set via optional `sidereal_mode` field:### Houses (1-12)
-
-- House cusp longitudes
-
-- `SIDM_LAHIRI` - Lahiri/N.C. Lahiri (default, widely used in India)- Zodiac signs of cusps
-
-- `SIDM_GALEQU_TRUE` - Galactic Equatorial True- Ruling planets
-
-- `SIDM_RAMAN` - Raman/Krishnamurti- Planets positioned in each house
-
-- `SIDM_FAGAN_BRADLEY` - Fagan Bradley
-
-- And others supported by Swiss Ephemeris### Nakshatra Details
-
-Complete information for all 27 nakshatras:
-
-Omitting `sidereal_mode` defaults to Lahiri ayanamsa.- Ruling planet
-
-- Degree ranges
-
-## Other Endpoints- Symbols and deities
-
-- Qualities
-
-### Health Check
-
-```### Sun/Moon Shine
-
-GET /health- Sunrise and sunset times
-
-```- Sun and Moon strength percentages
-
-- Moon phase information
-
-### API Documentation- Tithi (lunar day)
-
-```
-
-GET /docs## 🌟 Key Features Explained
-
-```
-
-### Swiss Ephemeris Integration
-
-### Home / Welcome- High-precision astronomical calculations
-
-```- Accurate planetary positions for any date/time
-
-GET /- Proper ayanamsa (precession) correction
-
-```- Sidereal zodiac calculations
-
-
-
-## Architecture### Modular Architecture
-
-- **Models**: Data structures and validation
-
-- **app.py**: Main Flask application and route registration- **Services**: Swiss Ephemeris integration
-
-- **routes/**: API endpoint implementations (d1_routes.py, d9_routes.py)- **Calculators**: Chart computation engines
-
-- **calculators/**: Chart calculation logic (d1_chart_calculator.py, d9_chart_calculator.py)- **API**: RESTful endpoints and formatting
-
-- **services/**: Swiss Ephemeris integration and astronomical calculations
-
-- **utils/**: Vedic astrology helper functions and mappings### Extensibility
-
-- **models/**: Data models and input validation schemasThe modular design allows easy addition of:
-
-- **ephe/**: Swiss Ephemeris data files- Divisional charts (D2, D3, D9, etc.)
-
-- Additional calculation methods
-
-## Technical Details- Different ayanamsa systems
-
-- Advanced strength calculations
-
-### D1 Chart Calculation- Aspect analysis
-
-
-
-1. Converts user datetime to Julian Day using timezone## 🛠️ Development
-
-2. Calculates ayanamsa (precession adjustment)
-
-3. Computes sidereal planetary positions### Running Tests
-
-4. Determines zodiac signs and nakshatras```bash
-
-5. Calculates houses using Whole Sign systempytest tests/
-
-6. Enriches with Vedic relationships and dignities```
-
-
-
-### D9 Chart Calculation### Code Structure
-
-- Follow PEP 8 coding standards
-
-1. Takes D1 planetary positions- Use type hints throughout
-
-2. Converts each to D9 using: `D9_longitude = (D1_absolute_longitude * 9) % 360`- Comprehensive docstrings
-
-3. Recalculates nakshatras for D9 positions- Modular, reusable components
-
-4. Applies same house and enrichment logic as D1
-
-5. Implements Drik Panchang-compatible node rulership### Adding New Features
-
-1. Add models in `models/astrology_models.py`
-
-## Error Handling2. Implement logic in appropriate service/calculator
-
-3. Add API endpoints in `app.py`
-
-All endpoints return error responses in this format:4. Update documentation
-
-
-
-```json## ☁️ Deployment
-
+**Request Body:**
+```json
 {
+  "name": "Hemant Rathore",
+  "datetime": "1987-05-04T19:43:00",
+  "latitude": 26.14,
+  "longitude": 91.79,
+  "timezone": 5.5,
+  "place": "Dispur"
+}
+```
 
-  "error": "Error description",### Azure App Service
+**Response Format:**
+```json
+{
+  "status": "success",
+  "lagna": {
+    "planet": "Ascendant",
+    "longitude": 144.5678,
+    "sign": "Leo",
+    "nakshatra": "Magha",
+    "pada": 3
+  },
+  "graha_table": [...],
+  "ayanamsa": 24.1234,
+  "Sunshine and Moonshine": {
+    "Sun Sign": "Virgo (Kanya Rashi)",
+    "Moon Sign": "Pisces (Meena Rashi)"
+  }
+}
+```
 
-  "details": "Additional information",```bash
+**What it generates:**
+- Natal ascendant sign and degree
+- Position of all planets (Sun, Moon, Mercury, Venus, Mars, Jupiter, Saturn, Rahu, Ketu)
+- Nakshatra (lunar mansion) each planet occupies
+- House positions
+- Sun & Moon Rashi in both English and Sanskrit names
+- Ayanamsa value (precession correction)
 
-  "status": "error"# Using Azure CLI
+---
 
-}az webapp up --runtime PYTHON:3.11 --sku B1 --name your-app-name
+### 2️⃣ D9 Chart - Navamsha (Marriage Chart)
 
-``````
+**Endpoint:** `POST /api/v1/d9-chart-refined`
 
+**Description:** Calculates the D9 (Navamsha) divisional chart used for analyzing marriage, relationships, and spiritual matters. Shows how planets are positioned in their ninth harmonic divisions.
 
+**Request Body:**
+```json
+{
+  "name": "Hemant Rathore",
+  "datetime": "1987-05-04T19:43:00",
+  "latitude": 26.14,
+  "longitude": 91.79,
+  "timezone": 5.5,
+  "place": "Dispur"
+}
+```
 
-Common HTTP status codes:### Docker
+**Response Format:**
+```json
+{
+  "status": "success",
+  "lagna": {
+    "planet": "Ascendant",
+    "longitude": 345.2341,
+    "sign": "Pisces"
+  },
+  "graha_table": [...],
+  "ayanamsa": 24.1234
+}
+```
 
-- `400`: Invalid or missing required fields```dockerfile
+**What it generates:**
+- D9 ascendant (Navamsha Lagna)
+- Position of all 9 planets in their D9 divisions
+- Nakshatra placements in D9
+- House positions for relationship analysis
+- Ayanamsa adjustment for Navamsha calculation
 
-- `422`: Validation failedFROM python:3.11-slim
+---
 
-- `500`: Internal server errorCOPY . /app
+### 3️⃣ Dasha - Mahadasha & Antardasha Periods
 
-WORKDIR /app
+**Endpoint:** `POST /api/v1/dasha`
 
-## NotesRUN pip install -r requirements.txt
+**Description:** Unified endpoint for calculating Vimshottari Dasha periods (120-year cycle). Supports flexible querying: entire year, specific month, single day, or custom date range. Returns active Mahadasha, Antardasha, and all periods within the queried timeframe.
 
-EXPOSE 5000
+**Request Bodies (Choose One Option):**
 
-- All times should be in the native's local time (not UTC)CMD ["gunicorn", "--bind=0.0.0.0:5000", "app:app"]
+**Option A - Full Year:**
+```json
+{
+  "name": "Hemant Rathore",
+  "datetime": "1987-05-04T19:43:00",
+  "latitude": 26.14,
+  "longitude": 91.79,
+  "timezone": 5.5,
+  "place": "Dispur",
+  "year": 2024
+}
+```
 
-- Timezone offset should be positive for east of GMT, negative for west```
+**Option B - Specific Month:**
+```json
+{
+  "name": "Hemant Rathore",
+  "datetime": "1987-05-04T19:43:00",
+  "latitude": 26.14,
+  "longitude": 91.79,
+  "timezone": 5.5,
+  "place": "Dispur",
+  "year": 2024,
+  "month": 3
+}
+```
 
-- Swiss Ephemeris data is pre-calculated and included with this package
+**Option C - Single Day:**
+```json
+{
+  "name": "Hemant Rathore",
+  "datetime": "1987-05-04T19:43:00",
+  "latitude": 26.14,
+  "longitude": 91.79,
+  "timezone": 5.5,
+  "place": "Dispur",
+  "date": "2024-03-15"
+}
+```
 
-- The API uses Vedic sidereal zodiac (tropical positions adjusted by ayanamsa)## 📚 Dependencies
+**Option D - Date Range:**
+```json
+{
+  "name": "Hemant Rathore",
+  "datetime": "1987-05-04T19:43:00",
+  "latitude": 26.14,
+  "longitude": 91.79,
+  "timezone": 5.5,
+  "place": "Dispur",
+  "start_date": "2024-01-01",
+  "end_date": "2024-12-31"
+}
+```
 
+**Response Format:**
+```json
+{
+  "status": "success",
+  "query_type": "year",
+  "range": {
+    "start": "2024-01-01",
+    "end": "2024-12-31"
+  },
+  "active_mahadasha": "Surya",
+  "active_antardasha": "Chandra",
+  "dasha_periods": [
+    {
+      "level": "Mahadasha",
+      "planet": "Surya",
+      "start_date": "2023-12-31T19:43:00",
+      "end_date": "2029-12-31T07:43:00",
+      "duration_years": 6,
+      "duration_days": 2191
+    },
+    {
+      "level": "Antardasha",
+      "planet": "Chandra",
+      "mahadasha_planet": "Surya",
+      "start_date": "2023-12-31T19:43:00",
+      "end_date": "2024-03-23T19:43:00",
+      "duration_years": 0,
+      "duration_days": 84
+    }
+  ]
+}
+```
 
+**What it generates:**
+- Mahadasha (main period) ruling the queried time
+- Antardasha (sub-period) active during that time
+- List of all Mahadasha and Antardasha periods in the range
+- Duration of each period in years and days
+- Exact start and end dates with times
 
-## Version- **Flask**: Web framework
+---
 
-- **swisseph**: Swiss Ephemeris Python wrapper
+### 4️⃣ Transits - All Planets
 
-Current Version: 2.0.0- **pyephem**: Astronomical calculations
+**Endpoint:** `POST /api/v1/transits`
 
-- **pytz**: Timezone handling
+**Description:** Returns current (or specified date) planetary transits through your natal houses. Shows all 7 major planets (Sun, Moon, Mercury, Venus, Mars, Jupiter, Saturn) with their current signs, house positions, and retrograde status.
 
-## Support- **marshmallow**: Input validation and serialization
+**Request Body:**
+```json
+{
+  "name": "Hemant Rathore",
+  "datetime": "1987-05-04T19:43:00",
+  "latitude": 26.14,
+  "longitude": 91.79,
+  "timezone": 5.5,
+  "place": "Dispur"
+}
+```
 
-- **python-dateutil**: Date/time parsing
+**With Specific Date (Optional):**
+```json
+{
+  "name": "Hemant Rathore",
+  "datetime": "1987-05-04T19:43:00",
+  "latitude": 26.14,
+  "longitude": 91.79,
+  "timezone": 5.5,
+  "place": "Dispur",
+  "transit_date": "2025-01-01T12:00:00"
+}
+```
 
-For issues and documentation:
+**Response Format:**
+```json
+{
+  "status": "success",
+  "natal_ascendant": {
+    "longitude": 144.5678,
+    "sign": "Leo",
+    "sign_sanskrit": "Simha"
+  },
+  "transit_date": "2025-12-11T10:30:00",
+  "ayanamsa": 24.2195,
+  "transits": {
+    "SUN": {
+      "planet": "SUN",
+      "longitude": 258.4567,
+      "sign": "Sagittarius",
+      "sign_sanskrit": "Dhanu",
+      "sign_number": 9,
+      "degrees_in_sign": 18.4567,
+      "house": 3,
+      "is_retrograde": false
+    },
+    "MOON": { ... },
+    "MERCURY": { ... },
+    "VENUS": { ... },
+    "MARS": { ... },
+    "JUPITER": { ... },
+    "SATURN": { ... }
+  }
+}
+```
 
-- API docs: `GET /docs`## 🔬 Technical Notes
+**What it generates:**
+- Natal ascendant (for house calculation reference)
+- Current date of transit calculation
+- All 7 planets' current positions
+- Sign placement (English + Sanskrit names)
+- House placement through natal chart
+- Degrees within sign
+- Retrograde status (true/false)
+- Ayanamsa value used
 
-- Health check: `GET /health`
+---
 
-### Coordinate Systems
-- Input: Geographic coordinates (latitude/longitude)
-- Internal: Sidereal zodiac with Lahiri ayanamsa
-- Output: Degrees within signs (0-30°)
+### 5️⃣ Transits - Major Planets Only
 
-### Time Handling
-- Input: Local time with timezone
-- Conversion: UTC for calculations
-- Julian Day: Internal astronomical time format
+**Endpoint:** `POST /api/v1/transits/major`
 
-### Precision
-- Planetary positions: 6 decimal places (arc-seconds accuracy)
-- Time calculations: Second-level precision
-- Ayanamsa: Current epoch correction
+**Description:** Returns transits for the 3 major slow-moving planets (Saturn, Jupiter, Mercury) which are most significant for life predictions. Same parameters as `/transits` but filtered response.
 
-## 🤝 Contributing
+**Request Body:**
+```json
+{
+  "name": "Hemant Rathore",
+  "datetime": "1987-05-04T19:43:00",
+  "latitude": 26.14,
+  "longitude": 91.79,
+  "timezone": 5.5,
+  "place": "Dispur"
+}
+```
 
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/new-feature`)
-3. Commit changes (`git commit -am 'Add new feature'`)
-4. Push to branch (`git push origin feature/new-feature`)
-5. Create Pull Request
+**With Specific Date (Optional):**
+```json
+{
+  "name": "Hemant Rathore",
+  "datetime": "1987-05-04T19:43:00",
+  "latitude": 26.14,
+  "longitude": 91.79,
+  "timezone": 5.5,
+  "place": "Dispur",
+  "transit_date": "2025-01-15T00:00:00"
+}
+```
 
-## 📄 License
+**Response Format:**
+```json
+{
+  "status": "success",
+  "natal_ascendant": {
+    "longitude": 144.5678,
+    "sign": "Leo",
+    "sign_sanskrit": "Simha"
+  },
+  "transit_date": "2025-12-11T10:35:00",
+  "ayanamsa": 24.2195,
+  "major_transits": {
+    "SATURN": {
+      "planet": "SATURN",
+      "longitude": 348.1234,
+      "sign": "Pisces",
+      "sign_sanskrit": "Meena",
+      "sign_number": 12,
+      "degrees_in_sign": 18.1234,
+      "house": 4,
+      "is_retrograde": false
+    },
+    "JUPITER": { ... },
+    "MERCURY": { ... }
+  }
+}
+```
 
-This project is licensed under the MIT License.
+**What it generates:**
+- Saturn position and transit house
+- Jupiter position and transit house
+- Mercury position and transit house
+- Sign placements for major life events analysis
+- House positions indicating life areas affected
+- Retrograde status for each planet
 
-## 🆘 Support
+---
 
-For issues and questions:
-1. Check the API documentation at `/docs`
-2. Review ephemeris setup in `ephe/README.md`
-3. Create GitHub issue with error details
+### 6️⃣ API Info
 
-## 🔮 Roadmap
+**Endpoint:** `GET /`
 
-- [ ] Divisional charts (D2, D3, D9, etc.)
-- [ ] Dasha calculations
-- [ ] Planetary aspects analysis
-- [ ] Strength calculations (Shadbala)
-- [ ] Transit predictions
-- [ ] Chart comparison (synastry)
-- [ ] Graphical chart generation
-- [ ] Multiple ayanamsa support
+**Description:** Returns API welcome message and list of all available endpoints.
+
+**Response:**
+```json
+{
+  "message": "Welcome to Vedic Astrology Chart API",
+  "version": "3.0.0",
+  "description": "Calculate D1 and D9 divisional charts...",
+  "charts_available": [...],
+  "endpoints": {...}
+}
+```
+
+---
+
+### 7️⃣ Health Check
+
+**Endpoint:** `GET /health`
+
+**Description:** Quick endpoint to verify API is running.
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "service": "Vedic Astrology Chart API",
+  "ephemeris": "Swiss Ephemeris",
+  "version": "3.0.0"
+}
+```
+
+---
+
+### 8️⃣ Documentation
+
+**Endpoint:** `GET /docs`
+
+**Description:** Inline API documentation with detailed parameter explanations.
+
+**Response:** Full documentation JSON with request/response formats
+
+---
+
+## Testing with Postman
+
+### Import Collection
+1. Import the `Postman_Collection.json` file into Postman
+2. Set base URL to `http://127.0.0.1:5000`
+3. All requests are pre-configured
+
+### Manual Testing Steps
+
+1. **Start the server:**
+   ```bash
+   python app.py
+   ```
+
+2. **Test D1 Chart:**
+   - Method: POST
+   - URL: `http://127.0.0.1:5000/api/v1/d1-chart-refined`
+   - Body (JSON): Copy from "Common Request Body" above
+   - Expected: 200 OK with chart data
+
+3. **Test Dasha (Year):**
+   - Method: POST
+   - URL: `http://127.0.0.1:5000/api/v1/dasha`
+   - Body: Add `"year": 2024` to common request
+   - Expected: 200 OK with Mahadasha/Antardasha periods
+
+4. **Test Transits:**
+   - Method: POST
+   - URL: `http://127.0.0.1:5000/api/v1/transits/major`
+   - Body: Use common request body
+   - Expected: 200 OK with Saturn, Jupiter, Mercury positions
+
+---
+
+## Data Dictionary
+
+### Chart Data Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| planet | string | Planet name (SUN, MOON, MERCURY, etc.) |
+| longitude | float | Ecliptic longitude (0-360 degrees) |
+| sign | string | English zodiac sign (Aries, Taurus, etc.) |
+| sign_sanskrit | string | Sanskrit zodiac sign (Mesha, Vrishabha, etc.) |
+| nakshatra | string | Lunar mansion (27 nakshatras) |
+| pada | int | Quarter of nakshatra (1-4) |
+| house | int | House placement (1-12) |
+| degrees_in_sign | float | Degrees within sign (0-30) |
+| is_retrograde | boolean | Retrograde motion status |
+
+### Dasha Period Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| level | string | "Mahadasha" or "Antardasha" |
+| planet | string | Ruling planet name |
+| start_date | string | Period start (YYYY-MM-DDTHH:MM:SS) |
+| end_date | string | Period end (YYYY-MM-DDTHH:MM:SS) |
+| duration_years | int | Years in period |
+| duration_days | int | Total days in period |
+| mahadasha_planet | string | Parent Mahadasha (for Antardasha only) |
+
+---
+
+## Vedic Astrology Concepts
+
+### D1 Chart (Rashi Chart)
+Shows personality, life path, and karmic purpose. Based on Moon's position at birth across 27 lunar mansions (nakshatras).
+
+### D9 Chart (Navamsha)
+Represents marriage, relationships, and spiritual evolution. Each sign is divided into 9 parts (navamsha), showing deeper relationship dynamics.
+
+### Vimshottari Dasha
+A 120-year planetary cycle starting from the Moon's nakshatra at birth. Dasha periods indicate which planet rules different life phases.
+
+### Planetary Transits
+Current planet positions moving through your natal chart houses. Shows upcoming planetary influences and timing of life events.
+
+---
+
+## Error Responses
+
+All errors return with appropriate HTTP status codes:
+
+```json
+{
+  "status": "error",
+  "message": "Descriptive error message"
+}
+```
+
+Common errors:
+- **400**: Missing required fields or invalid format
+- **422**: Validation failed (e.g., invalid date)
+- **500**: Server error (ephemeris data issue)
+
+---
+
+## Performance Notes
+
+- D1/D9 calculations: ~200-500ms per request
+- Dasha calculations: ~100-300ms per request
+- Transit calculations: ~150-400ms per request
+- Ephemeris data is cached in memory for performance
+
+---
+
+## Support & Ayanamsa Modes
+
+Default ayanamsa: **Lahiri** (most commonly used in Indian astrology)
+
+To specify different ayanamsa (optional):
+```json
+{
+  "name": "Hemant Rathore",
+  "datetime": "1987-05-04T19:43:00",
+  "latitude": 26.14,
+  "longitude": 91.79,
+  "timezone": 5.5,
+  "place": "Dispur",
+  "sidereal_mode": "LAHIRI"
+}
+```
+
+Available modes: `LAHIRI`, `RAMAN`, `KRISHNAMURTI`
+
+---
+
+## Project Structure
+
+```
+.
+├── app.py                          # Main Flask application
+├── requirements.txt                # Python dependencies
+├── README.md                       # This file
+├── Postman_Collection.json         # Postman import file
+├── routes/                         # API endpoints
+│   ├── d1_routes.py
+│   ├── d9_routes.py
+│   ├── dasha_routes.py
+│   └── transit_routes.py
+├── calculators/                    # Calculation engines
+│   ├── d1_chart_calculator.py
+│   ├── d9_chart_calculator.py
+│   ├── dasha_calculator.py
+│   └── transit_calculator.py
+├── services/                       # External service wrappers
+│   └── swiss_ephemeris_service.py
+├── utils/                          # Utilities
+│   └── vedic_helper.py
+├── models/                         # Data models
+│   ├── astrology_models.py
+│   └── validation_schemas.py
+└── ephe/                           # Swiss Ephemeris data files
+    └── [ephemeris binary files]
+```
+
+---
+
+## License
+
+Proprietary - Vedic Astrology Chart API  
+Uses Swiss Ephemeris (GPL License)
+
+---
+
+**Last Updated:** December 2025  
+**API Version:** 3.0.0

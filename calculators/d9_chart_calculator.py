@@ -100,6 +100,9 @@ class D9ChartCalculator:
         # Enrich planets with Vedic details
         d9_planets = self._enrich_planet_details(d9_planets, d9_houses)
         
+        # Enrich Lagna (ascendant) with nakshatra lord and sub-lord
+        d9_lagna = self._enrich_lagna(d9_lagna)
+        
         return {
             "d1_chart": d1_chart,
             "d9_lagna": d9_lagna,
@@ -327,6 +330,31 @@ class D9ChartCalculator:
             )
         
         return planets
+    
+    def _enrich_lagna(self, lagna: PlanetPosition) -> PlanetPosition:
+        """
+        Enrich D9 Lagna with nakshatra lord and sub-lord information.
+        
+        Args:
+            lagna: D9 lagna position
+            
+        Returns:
+            Enriched lagna position
+        """
+        # Get nakshatra lord from ephemeris service nakshatras list
+        nak_entry = next((n for n in self.ephemeris_service.nakshatras if n["name"] == lagna.nakshatra), None)
+        if nak_entry:
+            lagna.nakshatra_lord = nak_entry["ruler"]
+        
+        # Set sub-lord using KP system
+        if lagna.nakshatra_lord:
+            lagna.sub_lord = self.vedic_helper.get_sub_lord(
+                lagna.longitude, lagna.nakshatra_lord,
+                ephe_service=self.ephemeris_service,
+                epsilon=self.nakshatra_epsilon
+            )
+        
+        return lagna
     
     def get_d9_chart_data(self, user_details: UserDetails, d1_chart: D1Chart = None) -> Dict:
         """

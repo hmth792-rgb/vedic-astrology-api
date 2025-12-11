@@ -1,7 +1,9 @@
 """
-D1 Chart Routes
-All D1 (Rashi/Birth chart) related endpoints
+D1 Chart (Rashi) Routes
+Birth chart showing planetary positions in zodiac signs
+Essential graha data only
 """
+import os
 from flask import Blueprint, request, jsonify, Response
 from marshmallow import ValidationError
 import json
@@ -10,29 +12,33 @@ from models.astrology_models import UserDetails, Planet
 from models.validation_schemas import UserDetailsSchema
 from calculators.d1_chart_calculator import D1ChartCalculator
 from utils.vedic_helper import VedicAstrologyHelper
+from services.swiss_ephemeris_service import SwissEphemerisService
 
 # Create blueprint
 d1_bp = Blueprint('d1', __name__, url_prefix='/api/v1')
 
-# Initialize
+# Initialize schema
 user_schema = UserDetailsSchema()
 
 
-
-@d1_bp.route('/d1-chart', methods=['POST'])
-def calculate_d1_chart():
+@d1_bp.route('/d1-chart-refined', methods=['POST'])
+def calculate_d1_chart_refined():
     """
-    Calculate complete D1 chart with all details
+    Calculate D1 (Rashi) chart - simplified response with essential graha data only
+    
+    Returns: Graha, Longitude, Nakshatra, Lord/Sub Lord, Ruler of, Is In, B. Owner, 
+             Relationship, Dignities
     
     Request body:
     {
         "name": "string (required)",
         "datetime": "string (required) ISO format YYYY-MM-DDTHH:MM:SS",
-        "latitude": "float (required) -90 to 90",
-        "longitude": "float (required) -180 to 180",
-        "timezone": "float (required) hours offset",
+        "latitude": "float (required)",
+        "longitude": "float (required)",
+        "timezone": "float (required)",
         "place": "string (required)",
-        "religion": "string (optional)"
+        "religion": "string (optional)",
+        "sidereal_mode": "string (optional) - LAHIRI, RAMAN, KRISHNAMURTI, etc"
     }
     """
     try:
@@ -43,10 +49,8 @@ def calculate_d1_chart():
                 "status": "error"
             }), 400
         
-        # Extract optional sidereal_mode before validation to avoid schema 'Unknown field' errors
-        sidereal_mode = None
-        if isinstance(json_data, dict) and 'sidereal_mode' in json_data:
-            sidereal_mode = json_data.pop('sidereal_mode')
+        # Extract optional sidereal_mode before validation
+        sidereal_mode = json_data.pop('sidereal_mode', None)
 
         try:
             validated_data = user_schema.load(json_data)
@@ -58,61 +62,28 @@ def calculate_d1_chart():
             }), 400
 
         user_details = UserDetails(**validated_data)
-        # sidereal_mode was already popped above during validation
-        calculator = D1ChartCalculator(ephe_path="./ephe", node_rulership_strategy="drik_compat",
-                                       nakshatra_epsilon=1e-6, sidereal_mode=sidereal_mode)
-        d1_chart = calculator.calculate_d1_chart(user_details)
-        response = _format_full_chart_response(d1_chart)
 
-        return Response(
-            json.dumps(response, ensure_ascii=False),
-            mimetype='application/json'
+        # Get config from environment or use defaults
+        ephe_path = os.getenv('EPHEMERIS_PATH', './ephe')
+        node_rulership = os.getenv('NODE_RULERSHIP_STRATEGY', 'drik_compat')
+        nakshatra_eps = float(os.getenv('NAKSHATRA_EPSILON', 1e-6))
+        
+        # Use provided sidereal_mode or default from env
+        if sidereal_mode is None:
+            sidereal_mode = os.getenv('SIDEREAL_MODE', None)
+
+        # Instantiate calculator
+        d1_calculator = D1ChartCalculator(
+            ephe_path=ephe_path,
+            node_rulership_strategy=node_rulership,
+            nakshatra_epsilon=nakshatra_eps,
+            sidereal_mode=sidereal_mode
         )
-        
-    except Exception as e:
-        return jsonify({
-            "error": "Internal server error during chart calculation",
-            "message": str(e),
-            "status": "error"
-        }), 500
 
+        # Calculate D1
+        d1_chart = d1_calculator.calculate_d1_chart(user_details)
 
-@d1_bp.route('/d1-chart-refined', methods=['POST'])
-def calculate_d1_chart_refined():
-    """
-    Calculate D1 chart - simplified response with grahas only
-    
-    Returns only essential graha data: Graha, Longitude, Nakshatra, Lord/Sub Lord,
-    Ruler of, Is In, B. Owner, Relationship, Dignities
-    """
-    try:
-        json_data = request.get_json()
-        if not json_data:
-            return jsonify({
-                "error": "No JSON data provided",
-                "status": "error"
-            }), 400
-        
-        # Extract optional sidereal_mode before validation to avoid schema 'Unknown field' errors
-        sidereal_mode = None
-        if isinstance(json_data, dict) and 'sidereal_mode' in json_data:
-            sidereal_mode = json_data.pop('sidereal_mode')
-
-        try:
-            validated_data = user_schema.load(json_data)
-        except ValidationError as err:
-            return jsonify({
-                "error": "Validation failed",
-                "details": err.messages,
-                "status": "error"
-            }), 400
-
-        user_details = UserDetails(**validated_data)
-        # sidereal_mode was already popped above during validation
-        calculator = D1ChartCalculator(ephe_path="./ephe", node_rulership_strategy="drik_compat",
-                                       nakshatra_epsilon=1e-6, sidereal_mode=sidereal_mode)
-        d1_chart = calculator.calculate_d1_chart(user_details)
-        response = _format_refined_chart_response(d1_chart)
+        response = _format_refined_d1_response(d1_chart, ephe_path)
         
         return Response(
             json.dumps(response, ensure_ascii=False),
@@ -120,20 +91,21 @@ def calculate_d1_chart_refined():
         )
         
     except Exception as e:
+        import traceback
         return jsonify({
-            "error": "Internal server error during chart calculation",
+            "error": "Internal server error during D1 chart calculation",
             "message": str(e),
             "status": "error"
         }), 500
 
 
-def _format_refined_chart_response(d1_chart):
-    """Format D1 chart for refined endpoint"""
-    from services.swiss_ephemeris_service import SwissEphemerisService
+def _format_refined_d1_response(d1_chart, ephe_path):
+    """Format D1 chart for refined endpoint with essential graha data only"""
     helper = VedicAstrologyHelper()
-    ephe_service = SwissEphemerisService(ephe_path="./ephe")
+    ephe_service = SwissEphemerisService(ephe_path=ephe_path)
     
     def format_longitude_dms(longitude, sign):
+        """Format longitude in DMS format"""
         degree_in_sign = longitude % 30
         degrees = int(degree_in_sign)
         minutes = int((degree_in_sign - degrees) * 60)
@@ -143,26 +115,32 @@ def _format_refined_chart_response(d1_chart):
 
     graha_table = []
 
-    # Add Lagna first
-    lagna_nak_entry = next((n for n in ephe_service.nakshatras if n["name"] == d1_chart.lagna.nakshatra), None)
+    # Add D1 Lagna (Ascendant)
+    d1_lagna = d1_chart.lagna
+    lagna_nak_entry = next((n for n in ephe_service.nakshatras if n["name"] == d1_lagna.nakshatra), None)
     lagna_nak_lord = lagna_nak_entry["ruler"] if lagna_nak_entry else d1_chart.houses[0].ruler_planet
-    lagna_sub_lord = helper.get_sub_lord(d1_chart.lagna.longitude, lagna_nak_lord,
-                                         ephe_service=ephe_service,
-                                         epsilon=1e-6)
+    lagna_sub_lord = helper.get_sub_lord(
+        d1_lagna.longitude,
+        lagna_nak_lord,
+        ephe_service=ephe_service,
+        epsilon=1e-6
+    )
     lagna_lord_field = f"{helper.get_sanskrit_planet_name(lagna_nak_lord)}, {helper.get_sanskrit_planet_name(lagna_sub_lord)}"
 
-    graha_dict = {}
-    graha_dict["Graha"] = "Lagna"
-    graha_dict["Longitude"] = format_longitude_dms(d1_chart.lagna.longitude, d1_chart.lagna.sign)
-    graha_dict["Nakshatra"] = f"{d1_chart.lagna.nakshatra.name.replace('_', ' ').title()} {d1_chart.lagna.nakshatra_pada}"
-    graha_dict["Lord/Sub Lord"] = lagna_lord_field
-    graha_dict["Ruler of"] = "-"
-    graha_dict["Is In"] = 1
-    graha_dict["B. Owner"] = d1_chart.houses[0].ruler_planet.name
-    graha_dict["Relationship"] = "-"
-    graha_dict["Dignities"] = "-"
-    graha_table.append(graha_dict)
+    lagna_dict = {
+        "Graha": "Lagna",
+        "Longitude": format_longitude_dms(d1_lagna.longitude, d1_lagna.sign),
+        "Nakshatra": f"{d1_lagna.nakshatra.name.replace('_', ' ').title()} {d1_lagna.nakshatra_pada}",
+        "Lord/Sub Lord": lagna_lord_field,
+        "Ruler of": "-",
+        "Is In": 1,
+        "B. Owner": helper.get_sanskrit_planet_name(d1_chart.houses[0].ruler_planet),
+        "Relationship": "-",
+        "Dignities": "-"
+    }
+    graha_table.append(lagna_dict)
 
+    # Add all planets in proper order
     planet_order = [
         Planet.SUN, Planet.MOON, Planet.MARS, Planet.MERCURY,
         Planet.JUPITER, Planet.VENUS, Planet.SATURN, Planet.RAHU, Planet.KETU
@@ -193,20 +171,31 @@ def _format_refined_chart_response(d1_chart):
         else:
             rel_word = planet_pos.relationship
 
-        graha_dict = {}
-        graha_dict["Graha"] = f"{symbol}{planet_pos.planet.name.title()}{retrograde_symbol}"
-        graha_dict["Longitude"] = format_longitude_dms(planet_pos.longitude, planet_pos.sign)
-        graha_dict["Nakshatra"] = f"{planet_pos.nakshatra.name.replace('_', ' ').title()} {planet_pos.nakshatra_pada}"
-        graha_dict["Lord/Sub Lord"] = lord_sub_lord
-        graha_dict["Ruler of"] = ruler_of
-        graha_dict["Is In"] = planet_pos.is_in_house if planet_pos.is_in_house else "-"
-        graha_dict["B. Owner"] = planet_pos.house_owner.name if planet_pos.house_owner else "-"
-        graha_dict["Relationship"] = rel_word
-        graha_dict["Dignities"] = planet_pos.dignity if planet_pos.dignity else "-"
+        graha_dict = {
+            "Graha": f"{symbol}{planet_pos.planet.name.title()}{retrograde_symbol}",
+            "Longitude": format_longitude_dms(planet_pos.longitude, planet_pos.sign),
+            "Nakshatra": f"{planet_pos.nakshatra.name.replace('_', ' ').title()} {planet_pos.nakshatra_pada}",
+            "Lord/Sub Lord": lord_sub_lord,
+            "Ruler of": ruler_of,
+            "Is In": planet_pos.is_in_house if planet_pos.is_in_house else "-",
+            "B. Owner": helper.get_sanskrit_planet_name(planet_pos.house_owner) if planet_pos.house_owner else "-",
+            "Relationship": rel_word,
+            "Dignities": planet_pos.dignity if planet_pos.dignity else "-"
+        }
         graha_table.append(graha_dict)
+
+    # Extract Sun and Moon for Rashi information
+    sun_planet = next((p for p in d1_chart.planets if p.planet == Planet.SUN), None)
+    moon_planet = next((p for p in d1_chart.planets if p.planet == Planet.MOON), None)
+    
+    sun_sign_name = helper.get_sign_name(sun_planet.sign) if sun_planet else "-"
+    sun_sign_short = helper.get_sign_short_name(sun_planet.sign) if sun_planet else "-"
+    moon_sign_name = helper.get_sign_name(moon_planet.sign) if moon_planet else "-"
+    moon_sign_short = helper.get_sign_short_name(moon_planet.sign) if moon_planet else "-"
 
     return {
         "status": "success",
+        "chart_type": "D1 (Rashi) - Birth Chart",
         "data": {
             "Ascendant (Lagna)": graha_table[0] if graha_table else {},
             "Sun": graha_table[1] if len(graha_table) > 1 else {},
@@ -219,92 +208,9 @@ def _format_refined_chart_response(d1_chart):
             "Rahu": graha_table[8] if len(graha_table) > 8 else {},
             "Ketu": graha_table[9] if len(graha_table) > 9 else {},
             "Sunshine and Moonshine": {
-                "Sun Sign": f"{d1_chart.sun_moon_shine.sun_sign} ({d1_chart.sun_moon_shine.sun_sign_sanskrit} Rashi)",
-                "Moon Sign": f"{d1_chart.sun_moon_shine.moon_sign} ({d1_chart.sun_moon_shine.moon_sign_sanskrit} Rashi)"
+                "Sun Sign": f"{sun_sign_name} ({sun_sign_short} Rashi)" if sun_planet else "-",
+                "Moon Sign": f"{moon_sign_name} ({moon_sign_short} Rashi)" if moon_planet else "-"
             },
-            "ayanamsa": round(d1_chart.ayanamsa, 6)
-        }
-    }
-
-
-def _format_full_chart_response(d1_chart):
-    """Format D1 chart for full endpoint"""
-    from services.swiss_ephemeris_service import SwissEphemerisService
-    helper = VedicAstrologyHelper()
-    
-    def format_longitude_dms(longitude, sign):
-        degree_in_sign = longitude % 30
-        degrees = int(degree_in_sign)
-        minutes = int((degree_in_sign - degrees) * 60)
-        seconds = int(((degree_in_sign - degrees) * 60 - minutes) * 60)
-        sign_short = helper.get_sign_short_name(sign)
-        return f"{degrees:02d}° {sign_short} {minutes:02d}′ {seconds:02d}″"
-    
-    def format_planet(planet_pos):
-        symbol = helper.get_planet_symbol(planet_pos.planet)
-        retrograde_symbol = " ↺" if planet_pos.retrograde else ""
-        
-        nak_lord_name = planet_pos.nakshatra_lord.name if planet_pos.nakshatra_lord else ""
-        sub_lord_name = planet_pos.sub_lord.name if planet_pos.sub_lord else ""
-        
-        return {
-            "graha": f"{symbol}{planet_pos.planet.name.title()}{retrograde_symbol}",
-            "long": format_longitude_dms(planet_pos.longitude, planet_pos.sign),
-            "long_dec": round(planet_pos.longitude, 6),
-            "nak": planet_pos.nakshatra.name.replace("_", " ").title(),
-            "nak_pada": planet_pos.nakshatra_pada,
-            "nak_lord": nak_lord_name,
-            "sub_lord": sub_lord_name,
-            "rules": planet_pos.ruler_of_houses if planet_pos.ruler_of_houses else [],
-            "in": planet_pos.is_in_house if planet_pos.is_in_house else 0,
-            "house_owner": planet_pos.house_owner.name if planet_pos.house_owner else "-",
-            "rel": planet_pos.relationship if planet_pos.relationship else "-",
-            "dig": planet_pos.dignity if planet_pos.dignity else "-",
-            "sign": planet_pos.sign.name,
-            "deg": round(planet_pos.degree, 6),
-            "retro": planet_pos.retrograde
-        }
-    
-    def format_house(house_data):
-        return {
-            "no": house_data.house_number,
-            "res": [p.name for p in house_data.planets_in_house],
-            "own": house_data.ruler_planet.name,
-            "rashi": house_data.sign_short_name if house_data.sign_short_name else house_data.sign.name,
-            "sign": house_data.sign.name,
-            "qual": house_data.qualities if house_data.qualities else [],
-            "asp": [p.name for p in house_data.aspected_by] if house_data.aspected_by else [],
-            "cusp": round(house_data.cusp_longitude, 6)
-        }
-    
-    def format_nakshatra(nak_details):
-        return {
-            "name": nak_details.name.name.replace("_", " ").title(),
-            "ruler": nak_details.ruler.name,
-            "degree_start": round(nak_details.degree_start, 6),
-            "degree_end": round(nak_details.degree_end, 6),
-            "symbol": nak_details.symbol,
-            "deity": nak_details.deity,
-            "quality": nak_details.quality
-        }
-    
-    # Format Lagna
-    lagna_data = {
-        "graha": "Lagna",
-        "long": format_longitude_dms(d1_chart.lagna.longitude, d1_chart.lagna.sign),
-        "long_dec": round(d1_chart.lagna.longitude, 6),
-        "nak": d1_chart.lagna.nakshatra.name.replace("_", " ").title(),
-        "nak_pada": d1_chart.lagna.nakshatra_pada,
-        "sign": d1_chart.lagna.sign.name,
-        "deg": round(d1_chart.lagna.degree, 6)
-    }
-    
-    return {
-        "status": "success",
-        "data": {
-            "lagna": lagna_data,
-            "grahas": [format_planet(p) for p in d1_chart.planets],
-            "bhavas": [format_house(h) for h in d1_chart.houses],
             "ayanamsa": round(d1_chart.ayanamsa, 6)
         }
     }
