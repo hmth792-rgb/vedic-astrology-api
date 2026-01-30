@@ -291,7 +291,14 @@ class D1ChartCalculator:
                     if nakshatra_lord:
                         planet_pos.nakshatra_lord = nakshatra_lord
                     ruler_of_houses = self._compute_drik_node_rulership(planet_pos, planets, houses, lagna)
+                elif self.node_rulership_strategy == "sign_based":
+                    # Nodes rule houses of their sign lord
+                    sign_lord = self.sign_rulers[planet_pos.sign]
+                    for house in houses:
+                        if house.ruler_planet == sign_lord:
+                            ruler_of_houses.append(house.house_number)
                 else:
+                    # "nak_lord_rules": nodes rule houses of their nakshatra lord
                     if not ruler_of_houses and nakshatra_lord:
                         for house in houses:
                             if house.ruler_planet == nakshatra_lord:
@@ -304,7 +311,7 @@ class D1ChartCalculator:
             dignity = self.vedic_helper.get_planet_dignity(planet_pos.planet, planet_pos.sign, planet_pos.degree)
             planet_pos.nakshatra_lord = nakshatra_lord
             planet_pos.sub_lord = sub_lord if sub_lord else nakshatra_lord
-            planet_pos.ruler_of_houses = ruler_of_houses
+            planet_pos.ruler_of_houses = sorted(ruler_of_houses)  # Sort for consistent order
             planet_pos.is_in_house = planet_house
             planet_pos.house_owner = house_owner
             planet_pos.relationship = relationship

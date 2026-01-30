@@ -1,0 +1,42 @@
+[
+  {
+    "name": "FLASK_ENV",
+    "value": "production",
+    "slotSetting": true
+  },
+  {
+    "name": "FLASK_DEBUG",
+    "value": "False",
+    "slotSetting": true
+  },
+  {
+    "name": "FLASK_HOST",
+    "value": "0.0.0.0",
+    "slotSetting": true
+  },
+  {
+    "name": "FLASK_PORT",
+    "value": "8000",
+    "slotSetting": true
+  },
+  {
+    "name": "EPHEMERIS_PATH",
+    "value": "/home/site/wwwroot/ephe",
+    "slotSetting": true
+  },
+  {
+    "name": "SIDEREAL_MODE",
+    "value": "LAHIRI",
+    "slotSetting": true
+  },
+  {
+    "name": "NODE_RULERSHIP_STRATEGY",
+    "value": "drik_compat",
+    "slotSetting": true
+  },
+  {
+    "name": "NAKSHATRA_EPSILON",
+    "value": "1e-6",
+    "slotSetting": true
+  }
+]

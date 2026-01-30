@@ -305,14 +305,20 @@ class D9ChartCalculator:
                 # Strategy 2: Drik Panchang compatible
                 elif self.node_rulership_strategy == "drik_compat":
                     ruling_houses = self._compute_drik_node_rulership(planet, planets, houses)
-                # Strategy 3: Default - node rules houses of its nakshatra-lord
+                # Strategy 3: Sign-based (Drik style)
+                elif self.node_rulership_strategy == "sign_based":
+                    sign_lord = self.sign_rulers[planet.sign]
+                    for house in houses:
+                        if house.ruler_planet == sign_lord:
+                            ruling_houses.append(house.house_number)
+                # Strategy 4: Default - node rules houses of its nakshatra-lord
                 elif self.node_rulership_strategy == "nak_lord_rules":
                     if not ruling_houses and planet.nakshatra_lord:
                         for house in houses:
                             if house.ruler_planet == planet.nakshatra_lord:
                                 ruling_houses.append(house.house_number)
 
-            planet.ruler_of_houses = ruling_houses if ruling_houses else None
+            planet.ruler_of_houses = sorted(ruling_houses) if ruling_houses else None
             
             # Get relationship with house owner
             if planet.house_owner:

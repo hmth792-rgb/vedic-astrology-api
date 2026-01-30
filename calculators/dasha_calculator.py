@@ -108,15 +108,15 @@ class DashaCalculator:
         moon_nak_name = moon_planet.nakshatra.name.replace("_", " ").title()
         moon_nak_pada = moon_planet.nakshatra_pada
         
-        # Calculate Vimshottari start and age at birth
+        # Calculate Vimshottari start and balance at birth
         birth_dt = datetime.fromisoformat(user_details.datetime)
-        vimshottari_start, birth_age_days = self._calculate_vimshottari_start(
-            moon_nak_name, moon_nak_pada, birth_dt, d1_chart
+        vimshottari_start, balance_days = self._calculate_vimshottari_start(
+            moon_planet, birth_dt
         )
         
         # Get Mahadasha and Antardasha for the given year
         return self._get_dasha_for_year(
-            user_details, year, vimshottari_start, birth_dt, birth_age_days
+            user_details, year, vimshottari_start, birth_dt, balance_days
         )
     
     def get_dasha_for_date_range(
@@ -149,13 +149,13 @@ class DashaCalculator:
         
         # Calculate Vimshottari start
         birth_dt = datetime.fromisoformat(user_details.datetime)
-        vimshottari_start, birth_age_days = self._calculate_vimshottari_start(
-            moon_nak_name, moon_nak_pada, birth_dt, d1_chart
+        vimshottari_start, balance_days = self._calculate_vimshottari_start(
+            moon_planet, birth_dt
         )
         
         # Calculate all dasha periods in range
         periods = self._calculate_dasha_periods(
-            vimshottari_start, birth_dt, start, end
+            vimshottari_start, birth_dt, balance_days, start, end
         )
         
         return {
@@ -173,62 +173,67 @@ class DashaCalculator:
         }
     
     def _calculate_vimshottari_start(
-        self, moon_nak_name: str, moon_nak_pada: int, 
-        birth_dt: datetime, d1_chart
+        self,
+        moon_planet,
+        birth_dt: datetime
     ) -> tuple:
         """
-        Calculate Vimshottari start point and remaining dasha at birth
-        
+        Calculate starting Mahadasha lord and balance at birth using exact Moon longitude.
         Returns:
-            (start_planet, birth_age_in_days)
+            (start_planet, remaining_days_in_current_mahadasha)
         """
-        # Nakshatra to starting Mahadasha lord mapping
-        # Nakshatras 1, 4, 7, 10, 13, 16, 19, 22, 25 start with Ketu
+
+        # Correct Vimshottari nakshatra-to-lord mapping (9 lords cycle every 3 nakshatras)
         nak_map = {
-            "Ashwini": Planet.KETU, "Bharani": Planet.KETU, "Krittika": Planet.KETU,
-            "Rohini": Planet.VENUS, "Mrigashira": Planet.VENUS, "Ardra": Planet.VENUS,
-            "Punarvasu": Planet.SUN, "Pushya": Planet.SUN, "Ashlesha": Planet.SUN,
-            "Magha": Planet.MOON, "Purva_Phalguni": Planet.MOON, "Uttara_Phalguni": Planet.MOON,
-            "Hasta": Planet.MARS, "Chitra": Planet.MARS, "Swati": Planet.MARS,
-            "Vishakha": Planet.RAHU, "Anuradha": Planet.RAHU, "Jyeshtha": Planet.RAHU,
-            "Mula": Planet.JUPITER, "Purva_Ashadha": Planet.JUPITER, "Uttara_Ashadha": Planet.JUPITER,
-            "Shravana": Planet.SATURN, "Dhanishta": Planet.SATURN, "Shatabhisha": Planet.SATURN,
-            "Purva_Bhadrapada": Planet.MERCURY, "Uttara_Bhadrapada": Planet.MERCURY, "Revati": Planet.MERCURY
+            "Ashwini": Planet.KETU,
+            "Bharani": Planet.VENUS,
+            "Krittika": Planet.SUN,
+            "Rohini": Planet.MOON,
+            "Mrigashira": Planet.MARS,
+            "Ardra": Planet.RAHU,
+            "Punarvasu": Planet.JUPITER,
+            "Pushya": Planet.SATURN,
+            "Ashlesha": Planet.MERCURY,
+            "Magha": Planet.KETU,
+            "Purva Phalguni": Planet.VENUS,
+            "Uttara Phalguni": Planet.SUN,
+            "Hasta": Planet.MOON,
+            "Chitra": Planet.MARS,
+            "Swati": Planet.RAHU,
+            "Vishakha": Planet.JUPITER,
+            "Anuradha": Planet.SATURN,
+            "Jyeshtha": Planet.MERCURY,
+            "Mula": Planet.KETU,
+            "Purva Ashadha": Planet.VENUS,
+            "Uttara Ashadha": Planet.SUN,
+            "Shravana": Planet.MOON,
+            "Dhanishta": Planet.MARS,
+            "Shatabhisha": Planet.RAHU,
+            "Purva Bhadrapada": Planet.JUPITER,
+            "Uttara Bhadrapada": Planet.SATURN,
+            "Revati": Planet.MERCURY,
         }
-        
-        # Get starting dasha planet
-        moon_nak_clean = moon_nak_name.replace(" ", "_")
+
+        moon_nak_clean = moon_planet.nakshatra.name.replace("_", " ").title()
         start_planet = nak_map.get(moon_nak_clean, Planet.KETU)
-        
-        # Calculate remaining dasha in current Mahadasha based on pada
-        # Each nakshatra is 13°20' (13.333 degrees), divided into 4 padas of 3°20' each
-        # Pada determines position within nakshatra (0.25, 0.50, 0.75, 1.0 of nakshatra span)
-        dasha_lord_length = self.VIMSHOTTARI_LENGTHS[start_planet]
-        
-        # Pada-based remaining calculation
-        # If born in pada 1: 75% of dasha remaining
-        # If born in pada 2: 50% of dasha remaining
-        # If born in pada 3: 25% of dasha remaining
-        # If born in pada 4: 100% of next dasha's lord (transition point)
-        
-        pada_remaining_factor = {
-            1: 0.75,  # 3/4 remaining
-            2: 0.50,  # 2/4 remaining
-            3: 0.25,  # 1/4 remaining
-            4: 0.00   # Transition to next
-        }
-        
-        remaining_factor = pada_remaining_factor.get(moon_nak_pada, 0.75)
-        remaining_days = dasha_lord_length * 365.25 * remaining_factor
-        
-        # Calculate birth age (age in days from Vimshottari start perspective)
-        birth_age_days = remaining_days
-        
-        return start_planet, birth_age_days
+
+        # Exact balance: remaining portion of current nakshatra * Mahadasha length
+        nakshatra_span = 360 / 27.0  # 13°20'
+        moon_long = moon_planet.longitude % 360
+        # Start of this nakshatra from 0° Aries
+        start_deg = (moon_planet.nakshatra.value - 1) * nakshatra_span
+        fraction_elapsed = ((moon_long - start_deg) % nakshatra_span) / nakshatra_span
+        fraction_elapsed = max(0.0, min(1.0, fraction_elapsed))
+
+        dasha_length_years = self.VIMSHOTTARI_LENGTHS[start_planet]
+        remaining_years = dasha_length_years * (1 - fraction_elapsed)
+        remaining_days = remaining_years * 365.25
+
+        return start_planet, remaining_days
     
     def _get_dasha_for_year(
         self, user_details: UserDetails, year: int,
-        vimshottari_start: Planet, birth_dt: datetime, birth_age_days: float
+        vimshottari_start: Planet, birth_dt: datetime, balance_days: float
     ) -> DashaYear:
         """
         Get Mahadasha and Antardasha active during a specific year
@@ -239,7 +244,7 @@ class DashaCalculator:
         
         # Get all dasha periods for this year
         periods = self._calculate_dasha_periods(
-            vimshottari_start, birth_dt, start_of_year, end_of_year
+            vimshottari_start, birth_dt, balance_days, start_of_year, end_of_year
         )
         
         # Find which Mahadasha is active
@@ -271,40 +276,38 @@ class DashaCalculator:
         )
     
     def _calculate_dasha_periods(
-        self, start_planet: Planet, birth_dt: datetime,
-        start_date: datetime, end_date: datetime
+        self,
+        start_planet: Planet,
+        birth_dt: datetime,
+        balance_days: float,
+        start_date: datetime,
+        end_date: datetime
     ) -> List[Dict]:
         """
-        Calculate all Mahadasha and Antardasha periods within a date range
+        Calculate all Mahadasha and Antardasha periods within a date range.
+        Uses exact balance at birth to anchor the first Mahadasha start time.
         """
         periods = []
-        
-        # Calculate birth age in days
-        birth_age_days = (start_date - birth_dt).days
-        if birth_age_days < 0:
-            birth_age_days = 0
-        
-        # Calculate total elapsed days since Vimshottari start
-        total_elapsed_days = birth_age_days
-        
-        # Current dasha state
+
+        # Length of starting Mahadasha
+        start_maha_days = self.VIMSHOTTARI_LENGTHS[start_planet] * 365.25
+
+        # Elapsed portion before birth (if any) to anchor the cycle
+        elapsed_before_birth = start_maha_days - balance_days
+        first_maha_start = birth_dt - timedelta(days=elapsed_before_birth)
+
         current_idx = self.VIMSHOTTARI_ORDER.index(start_planet)
-        current_age = total_elapsed_days
-        
-        # Generate Mahadasha periods
-        while current_age < (end_date - birth_dt).days + 100000:  # Safety limit
+        current_maha_start = first_maha_start
+
+        # Generate Mahadasha periods until we pass the requested end date
+        while current_maha_start <= end_date:
             current_planet = self.VIMSHOTTARI_ORDER[current_idx % 9]
             dasha_length_days = self.VIMSHOTTARI_LENGTHS[current_planet] * 365.25
-            
-            start_offset = current_age
-            end_offset = current_age + dasha_length_days
-            
-            maha_start = birth_dt + timedelta(days=start_offset)
-            maha_end = birth_dt + timedelta(days=end_offset)
-            
-            # Only include if within our date range
+
+            maha_start = current_maha_start
+            maha_end = maha_start + timedelta(days=dasha_length_days)
+
             if maha_end >= start_date and maha_start <= end_date:
-                # Add Mahadasha
                 periods.append({
                     "level": "Mahadasha",
                     "planet": current_planet,
@@ -314,20 +317,20 @@ class DashaCalculator:
                     "duration_years": self.VIMSHOTTARI_LENGTHS[current_planet],
                     "duration_days": int(dasha_length_days)
                 })
-                
-                # Add Antardasha periods for this Mahadasha
+
                 antardasha_periods = self._get_antardasha_periods(
                     current_planet, maha_start, maha_end, start_date, end_date
                 )
                 periods.extend(antardasha_periods)
-            
-            current_age = end_offset
+
+            # Advance to next Mahadasha
+            current_maha_start = maha_end
             current_idx += 1
-            
-            # Stop if we've gone past our date range
-            if maha_start > end_date:
+
+            # Safety: stop after full 120-year cycle beyond the requested range
+            if current_maha_start - first_maha_start > timedelta(days=120 * 365.25 + 1):
                 break
-        
+
         return periods
     
     def _get_antardasha_periods(
@@ -340,7 +343,7 @@ class DashaCalculator:
         antardasha_periods = []
         
         # Antardasha cycles are in the same order as Mahadasha
-        total_maha_days = (maha_end - maha_start).days
+        total_maha_days = (maha_end - maha_start).total_seconds() / 86400.0
         
         current_idx = self.VIMSHOTTARI_ORDER.index(mahadasha_planet)
         current_date = maha_start

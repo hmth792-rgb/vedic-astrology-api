@@ -66,7 +66,7 @@ def calculate_d9_chart_refined():
 
         # Get config from environment or use defaults
         ephe_path = os.getenv('EPHEMERIS_PATH', './ephe')
-        node_rulership = os.getenv('NODE_RULERSHIP_STRATEGY', 'drik_compat')
+        node_rulership = os.getenv('NODE_RULERSHIP_STRATEGY', 'nak_lord_rules')
         nakshatra_eps = float(os.getenv('NAKSHATRA_EPSILON', 1e-6))
         
         # Use provided sidereal_mode or default from env

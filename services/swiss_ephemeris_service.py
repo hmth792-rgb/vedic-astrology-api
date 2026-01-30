@@ -167,8 +167,10 @@ class SwissEphemerisService:
         Returns:
             Ayanamsa value in degrees
         """
-        # Use Lahiri Ayanamsa (most commonly used in India)
-        swe.set_sid_mode(swe.SIDM_LAHIRI)
+        # Use the configured sidereal mode (default is SIDM_LAHIRI)
+        # Do NOT reset the mode here - it should already be set in __init__ or set_sidereal_mode
+        if self.sidereal_mode is not None:
+            swe.set_sid_mode(self.sidereal_mode)
         return swe.get_ayanamsa(julian_day)
     
     def get_planet_position(self, planet: Planet, julian_day: float) -> Tuple[float, float, float, float]:
@@ -180,11 +182,13 @@ class SwissEphemerisService:
             julian_day: Julian Day Number
             
         Returns:
-            Tuple of (longitude, latitude, distance, speed)
+            Tuple of (longitude, latitude, distance, speed) - returns TROPICAL positions
+            Note: Caller must subtract ayanamsa to get sidereal positions
         """
         if planet == Planet.KETU:
             # Ketu is 180 degrees opposite to Rahu
-            rahu_pos = swe.calc_ut(julian_day, swe.MEAN_NODE)[0]
+            # Use FLG_SWIEPH for standard calculations (returns tropical)
+            rahu_pos = swe.calc_ut(julian_day, swe.MEAN_NODE, swe.FLG_SWIEPH)[0]
             longitude = (rahu_pos[0] + 180) % 360
             return (longitude, 0, 0, rahu_pos[3])
         
@@ -192,7 +196,9 @@ class SwissEphemerisService:
         if swe_planet is None:
             raise ValueError(f"Unknown planet: {planet}")
         
-        result = swe.calc_ut(julian_day, swe_planet)
+        # Use FLG_SWIEPH for standard calculations (returns tropical positions)
+        # The caller (D1ChartCalculator) will subtract ayanamsa to get sidereal
+        result = swe.calc_ut(julian_day, swe_planet, swe.FLG_SWIEPH)
         return result[0][:4]  # longitude, latitude, distance, speed
     
     def calculate_houses(self, julian_day: float, latitude: float, longitude: float) -> List[float]:

@@ -131,7 +131,7 @@ class VedicAstrologyHelper:
     
     @staticmethod
     def get_planet_dignity(planet: Planet, sign: Zodiac, degree: float) -> str:
-        """Calculate planet dignity"""
+        """Calculate planet dignity - return only Exalted or Debilitated"""
         if planet in [Planet.RAHU, Planet.KETU]:
             return "-"
             
@@ -147,11 +147,7 @@ class VedicAstrologyHelper:
             if sign == debil_sign:
                 return Dignity.DEBILITATED.value
         
-        # Check own house
-        if planet in VedicAstrologyHelper.PLANET_HOUSE_RULERSHIP:
-            if sign in VedicAstrologyHelper.PLANET_HOUSE_RULERSHIP[planet]:
-                return Dignity.OWN_HOUSE.value
-        
+        # Don't show Own House, Moolatrikona, etc. - only Exalted/Debilitated
         return "-"
     
     @staticmethod
@@ -160,8 +156,11 @@ class VedicAstrologyHelper:
         if planet == sign_lord:
             return "Own House"
         
-        if planet in [Planet.RAHU, Planet.KETU]:
-            return "Neutral"
+        # Nodes have specific relationships: Rahu is enemy, Ketu is friend
+        if planet == Planet.RAHU:
+            return Relationship.ENEMY.value
+        elif planet == Planet.KETU:
+            return Relationship.FRIEND.value
             
         if sign_lord in VedicAstrologyHelper.NATURAL_FRIENDS.get(planet, []):
             return Relationship.FRIEND.value

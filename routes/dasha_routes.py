@@ -3,12 +3,14 @@ Dasha Routes
 Mahadasha and Antardasha period calculations using Vimshottari dasha system
 """
 import os
+from datetime import datetime
 from flask import Blueprint, request, jsonify
 from marshmallow import ValidationError
 from models.astrology_models import UserDetails, Planet
 from models.validation_schemas import UserDetailsSchema
 from calculators.dasha_calculator import DashaCalculator
 from calculators.d1_chart_calculator import D1ChartCalculator
+from utils.dasha_helper import NumerologyHelper, DashaAnalysisHelper
 
 # Create blueprint
 dasha_bp = Blueprint('dasha', __name__, url_prefix='/api/v1')
@@ -202,15 +204,100 @@ def get_dasha():
                 formatted_period["mahadasha_planet"] = period.get("mahadasha_planet_name", "-")
             formatted_periods.append(formatted_period)
         
-        # Find active mahadasha and antardasha for the period
+        # Calculate numerology
+        try:
+            birth_date_only = user_details.datetime.split("T")[0]  # YYYY-MM-DD
+            day_of_birth = int(birth_date_only.split("-")[2])
+            
+            name_number = NumerologyHelper.calculate_number(user_details.name)
+            destiny_number = NumerologyHelper.calculate_destiny_number(birth_date_only)
+            basic_number = NumerologyHelper.calculate_basic_number(day_of_birth)
+        except Exception:
+            name_number = destiny_number = basic_number = None
+        
+        # Get detailed current dasha analysis
+        dasha_analysis = DashaAnalysisHelper.get_current_dasha_details(
+            user_details.datetime,
+            formatted_periods
+        )
+        
+        # Find active mahadasha and antardasha at range start
+        def _parse_date(dt_str: str):
+            if not dt_str:
+                return None
+            # Normalize 'Z' suffix and missing time parts
+            cleaned = dt_str.replace("Z", "")
+            try:
+                return datetime.fromisoformat(cleaned)
+            except Exception:
+                try:
+                    return datetime.fromisoformat(cleaned + "T00:00:00")
+                except Exception:
+                    return None
+
+        query_start_dt = _parse_date(start_date)
         active_maha = None
         active_antar = None
-        
+
         for period in formatted_periods:
-            if period["level"] == "Mahadasha":
+            p_start = _parse_date(period.get("start_date", ""))
+            p_end = _parse_date(period.get("end_date", ""))
+            if not p_start or not p_end or not query_start_dt:
+                continue
+
+            if period["level"] == "Mahadasha" and p_start <= query_start_dt <= p_end:
                 active_maha = period["planet"]
-            elif period["level"] == "Antardasha" and active_antar is None:
+            elif period["level"] == "Antardasha" and p_start <= query_start_dt <= p_end:
                 active_antar = period["planet"]
+
+        # Fallback to current analysis if nothing matched (e.g., parsing issues)
+        if active_maha is None and dasha_analysis.get("current_mahadasha"):
+            active_maha = dasha_analysis["current_mahadasha"].get("planet")
+        if active_antar is None and dasha_analysis.get("current_antardasha"):
+            active_antar = dasha_analysis["current_antardasha"].get("planet")
+        
+        # Build detailed analysis section
+        analysis = {
+            "numerology": {
+                "name_number": name_number,
+                "destiny_number": destiny_number,
+                "basic_number": basic_number
+            }
+        }
+        
+        # Add current period details if available
+        if dasha_analysis["current_mahadasha_progress"]:
+            maha_prog = dasha_analysis["current_mahadasha_progress"]
+            maha_planet = dasha_analysis["current_mahadasha"]["planet"]
+            analysis["current_mahadasha"] = {
+                "lord": maha_planet,
+                "number": dasha_analysis["current_mahadasha"].get("duration_years", 0),
+                "period": f"{maha_prog['start_date']} – {maha_prog['end_date']}",
+                "progress": f"{int(maha_prog['elapsed_years'])}/{int(maha_prog['total_years'])} years",
+                "percentage": maha_prog['percentage']
+            }
+        
+        if dasha_analysis["current_antardasha_progress"]:
+            antar_prog = dasha_analysis["current_antardasha_progress"]
+            antar_planet = dasha_analysis["current_antardasha"]["planet"]
+            analysis["current_antardasha"] = {
+                "lord": antar_planet,
+                "number": dasha_analysis["current_antardasha"].get("duration_years", 0),
+                "period": f"{antar_prog['start_date']} – {antar_prog['end_date']}",
+                "duration_days": antar_prog['duration_days'],
+                "progress": f"{antar_prog['elapsed_days']}/{antar_prog['duration_days']} days",
+                "percentage": antar_prog['percentage']
+            }
+        
+        if dasha_analysis["pratantardasha"]:
+            prat = dasha_analysis["pratantardasha"]
+            analysis["pratantardasha"] = {
+                "starting_lord": prat["starting_lord"],
+                "current_lord": prat["current_lord"],
+                "started": prat["started"],
+                "expected_end": prat["expected_end"],
+                "duration_days": prat["duration_days"]
+            }
         
         # Format response
         return jsonify({
@@ -226,6 +313,7 @@ def get_dasha():
                 "moon_nakshatra": moon_nakshatra,
                 "moon_pada": moon_pada
             },
+            "analysis": analysis,
             "active_mahadasha": active_maha,
             "active_antardasha": active_antar,
             "dasha_periods": formatted_periods
