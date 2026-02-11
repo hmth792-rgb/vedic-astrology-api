@@ -13,7 +13,7 @@ from utils.vedic_helper import VedicAstrologyHelper
 class D1ChartCalculator:
   
     def __init__(self, ephe_path: str = "./ephe", node_rulership_strategy: str = "nak_lord_rules",
-                 nakshatra_epsilon: float = 1e-6, sidereal_mode = None):
+                 nakshatra_epsilon: float = 1e-6, sidereal_mode = None, ayanamsa_offset: float = 0.0):
 
         self.ephemeris_service = SwissEphemerisService(ephe_path)
     
@@ -30,6 +30,7 @@ class D1ChartCalculator:
         self.node_rulership_strategy = node_rulership_strategy
        
         self.nakshatra_epsilon = nakshatra_epsilon
+        self.ayanamsa_offset = ayanamsa_offset
     
     def calculate_d1_chart(self, user_details: UserDetails) -> D1Chart:
 
@@ -37,7 +38,7 @@ class D1ChartCalculator:
             user_details.datetime, user_details.timezone
         )
 
-        ayanamsa = self.ephemeris_service.calculate_ayanamsa(julian_day)
+        ayanamsa = self.ephemeris_service.calculate_ayanamsa(julian_day) + self.ayanamsa_offset
 
         ascendant_longitude = self.ephemeris_service.calculate_ascendant(
             julian_day, user_details.latitude, user_details.longitude

@@ -23,7 +23,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Import route blueprints
-from routes import d1_bp, d2_bp, d3_bp, d4_bp, d9_bp, dasha_bp, transit_bp
+from routes import d1_bp, d2_bp, d3_bp, d4_bp, d5_bp, d6_bp, d7_bp, d8_bp, d9_bp, d10_bp, dasha_bp, transit_bp
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -34,7 +34,12 @@ app.register_blueprint(d1_bp)
 app.register_blueprint(d2_bp)
 app.register_blueprint(d3_bp)
 app.register_blueprint(d4_bp)
+app.register_blueprint(d5_bp)
+app.register_blueprint(d6_bp)
+app.register_blueprint(d7_bp)
+app.register_blueprint(d8_bp)
 app.register_blueprint(d9_bp)
+app.register_blueprint(d10_bp)
 app.register_blueprint(dasha_bp)
 app.register_blueprint(transit_bp)
 
@@ -45,13 +50,18 @@ def home():
     return jsonify({
         "message": "Welcome to Vedic Astrology Chart API",
         "version": "3.0.0",
-        "description": "Calculate D1, D2, D3, D4, and D9 divisional charts, Mahadasha/Antardasha periods, and Planetary Transits using Swiss Ephemeris and Vedic astrology",
+        "description": "Calculate D1, D2, D3, D4, D5, D6, D7, D8, D9, and D10 divisional charts, Mahadasha/Antardasha periods, and Planetary Transits using Swiss Ephemeris and Vedic astrology",
         "charts_available": [
             "D1 (Rashi) - Birth Chart",
             "D2 (Hora) - Wealth & Fortune",
             "D3 (Drekkana) - Siblings & Courage",
             "D4 (Chaturthamsa) - Property & Fixed Assets",
+            "D5 (Quinamsha) - Intellect & Skills",
+            "D6 (Shashtamsha) - Health & Enemies",
+            "D7 (Saptamsha) - Children & Creativity",
+            "D8 (Ashtamsa) - Longevity & Obstacles",
             "D9 (Navamsha) - Marriage & Relationships",
+            "D10 (Dasamsa) - Career & Profession",
             "Dasha Periods - Mahadasha & Antardasha",
             "Planetary Transits - Current positions through houses"
         ],
@@ -59,7 +69,13 @@ def home():
             "D1 Refined": "/api/v1/d1-chart-refined (POST)",
             "D2 Refined": "/api/v1/d2-chart-refined (POST)",
             "D3 Refined": "/api/v1/d3-chart-refined (POST)",
+            "D4 Refined": "/api/v1/d4-chart-refined (POST)",
+            "D5 Refined": "/api/v1/d5-chart-refined (POST)",
+            "D6 Refined": "/api/v1/d6-chart-refined (POST)",
+            "D7 Refined": "/api/v1/d7-chart-refined (POST)",
+            "D8 Refined": "/api/v1/d8-chart-refined (POST)",
             "D9 Refined": "/api/v1/d9-chart-refined (POST)",
+            "D10 Refined": "/api/v1/d10-chart-refined (POST)",
             "Dasha (Unified)": "/api/v1/dasha (POST) - year, month, day, or date range",
             "All Transits": "/api/v1/transits (POST) - Current positions of all major planets",
             "Major Transits": "/api/v1/transits/major (POST) - Saturn, Jupiter, Mercury only",
@@ -86,7 +102,7 @@ def api_documentation():
     return jsonify({
         "title": "Vedic Astrology Chart API Documentation",
         "version": "3.0.0",
-        "description": "API for calculating D1 (Rashi), D2 (Hora), D3 (Drekkana), and D9 (Navamsha) divisional charts using Swiss Ephemeris",
+        "description": "API for calculating D1 (Rashi) through D10 (Dasamsa) divisional charts using Swiss Ephemeris",
         "request_format": {
             "name": "string (required) - Full name",
             "datetime": "string (required) - Birth date and time in ISO format (YYYY-MM-DDTHH:MM:SS)",
@@ -120,6 +136,18 @@ def api_documentation():
                 "path": "/api/v1/d9-chart-refined",
                 "method": "POST",
                 "description": "Calculate D9 (Navamsha) chart with essential graha data only",
+                "response": "Simplified format: Graha, Longitude, Nakshatra, Lord/Sub Lord, Ruler of, Is In, B. Owner, Relationship, Dignities"
+            },
+            "D8 Chart Refined": {
+                "path": "/api/v1/d8-chart-refined",
+                "method": "POST",
+                "description": "Calculate D8 (Ashtamsa) chart for longevity, obstacles, and misfortunes",
+                "response": "Simplified format: Graha, Longitude, Nakshatra, Lord/Sub Lord, Ruler of, Is In, B. Owner, Relationship, Dignities"
+            },
+            "D10 Chart Refined": {
+                "path": "/api/v1/d10-chart-refined",
+                "method": "POST",
+                "description": "Calculate D10 (Dasamsa) chart for career, profession, and status",
                 "response": "Simplified format: Graha, Longitude, Nakshatra, Lord/Sub Lord, Ruler of, Is In, B. Owner, Relationship, Dignities"
             },
             "D4 Chart Refined": {
