@@ -79,136 +79,111 @@ def calculate_d8_chart_refined():
 
 
 def _format_refined_d8_response(d8_data: dict) -> dict:
-    """Format D8 data into refined response with essential graha information only."""
-    vedic_helper = VedicAstrologyHelper()
+    """Format D8 data into refined response matching D9 format with named dict structure"""
+    helper = VedicAstrologyHelper()
     from services.swiss_ephemeris_service import SwissEphemerisService
     ephe_service = SwissEphemerisService("./ephe")
 
     planets_data = d8_data['planets']
-    houses_data = d8_data['houses']
     lagna = d8_data['lagna']
 
-    # Helper function to format longitude as degrees, minutes, seconds
-    def format_longitude(longitude, sign):
+    def format_longitude_dms(longitude, sign):
+        """Format longitude in DMS format with sign name"""
         degree_in_sign = longitude % 30
         degrees = int(degree_in_sign)
         minutes = int((degree_in_sign - degrees) * 60)
         seconds = int(((degree_in_sign - degrees) * 60 - minutes) * 60)
-        sign_short = vedic_helper.get_sign_short_name(sign)
+        sign_short = helper.get_sign_short_name(sign)
         return f"{degrees:02d}° {sign_short} {minutes:02d}′ {seconds:02d}″"
-
-    # Helper to compute house number from lagna sign and target sign
-    def house_from_sign(lagna_sign, target_sign):
-        return ((target_sign.value - lagna_sign.value) % 12) + 1
 
     graha_table = []
 
-    # Add Lagna first
-    lagna_nak_entry = next((n for n in ephe_service.nakshatras if n["name"] == lagna.nakshatra), None)
-    lagna_nak_lord = vedic_helper.get_sanskrit_planet_name(lagna_nak_entry["ruler"]) if lagna_nak_entry else "N/A"
-    lagna_sub_lord = "N/A"
-    if lagna_nak_entry:
-        lagna_sub_lord_planet = vedic_helper.get_sub_lord(
-            lagna.longitude, lagna_nak_entry["ruler"],
-            ephe_service=ephe_service,
-            epsilon=1e-6
-        )
-        lagna_sub_lord = vedic_helper.get_sanskrit_planet_name(lagna_sub_lord_planet) if lagna_sub_lord_planet else "N/A"
+    # Add D8 Lagna
+    d8_lagna = lagna
+    lagna_nak_entry = next((n for n in ephe_service.nakshatras if n["name"] == d8_lagna.nakshatra), None)
+    lagna_nak_lord = lagna_nak_entry["ruler"] if lagna_nak_entry else None
+    lagna_sub_lord = helper.get_sub_lord(
+        d8_lagna.longitude,
+        lagna_nak_lord,
+        ephe_service=ephe_service,
+        epsilon=1e-6
+    ) if lagna_nak_lord else None
 
-    lagna_nak_name = lagna.nakshatra.name.replace('_', ' ').title() if lagna.nakshatra else "N/A"
-    lagna_pada = lagna.nakshatra_pada if hasattr(lagna, 'nakshatra_pada') else 0
+    lagna_lord_field = f"{helper.get_sanskrit_planet_name(lagna_nak_lord)}, {helper.get_sanskrit_planet_name(lagna_sub_lord)}" if lagna_nak_lord and lagna_sub_lord else "-"
 
-    lagna_row = {
-        "Graha": "Lagna (A)",
-        "Longitude": format_longitude(lagna.longitude, lagna.sign),
-        "Nakshatra (Pada)": f"{lagna_nak_name} {lagna_pada}",
-        "Lord / Sub-Lord": f"{lagna_nak_lord}, {lagna_sub_lord}",
-        "Ruler of": "1 Bhava",
-        "Is In (Bhava)": "1 Bhava",
-        "B. Owner": vedic_helper.get_sanskrit_planet_name(VedicAstrologyHelper.SIGN_LORDS[lagna.sign]) if lagna.sign in VedicAstrologyHelper.SIGN_LORDS else "N/A",
-        "Relationship": "–",
-        "Dignities": "–"
+    lagna_dict = {
+        "Graha": "Lagna",
+        "Longitude": format_longitude_dms(d8_lagna.longitude, d8_lagna.sign),
+        "Nakshatra": f"{d8_lagna.nakshatra.name.replace('_', ' ').title()} {d8_lagna.nakshatra_pada}",
+        "Lord/Sub Lord": lagna_lord_field,
+        "Ruler of": "-",
+        "Is In": 1,
+        "B. Owner": helper.get_sanskrit_planet_name(d8_data['houses'][0].ruler_planet),
+        "Relationship": "-",
+        "Dignities": "-"
     }
-    graha_table.append(lagna_row)
+    graha_table.append(lagna_dict)
 
-    # Add planets
-    for planet in planets_data:
-        symbol = vedic_helper.get_planet_symbol(planet.planet)
-        sanskrit_name = vedic_helper.get_sanskrit_planet_name(planet.planet)
-
-        retrograde_symbol = " ↺" if hasattr(planet, 'retrograde') and planet.retrograde else ""
-        planet_display = f"{symbol} {sanskrit_name}{retrograde_symbol}"
-
-        nak_name = planet.nakshatra.name.replace('_', ' ').title() if planet.nakshatra else "N/A"
-        pada = planet.nakshatra_pada if hasattr(planet, 'nakshatra_pada') else 0
-        nakshatra_display = f"{nak_name} {pada}"
-
-        nak_lord = vedic_helper.get_sanskrit_planet_name(planet.nakshatra_lord) if planet.nakshatra_lord else "N/A"
-        sub_lord = vedic_helper.get_sanskrit_planet_name(planet.sub_lord) if planet.sub_lord else "N/A"
-        lord_display = f"{nak_lord}, {sub_lord}"
-
-        ruled_houses = planet.ruler_of_houses if hasattr(planet, 'ruler_of_houses') else []
-
-        from models.astrology_models import Planet as PlanetEnum
-        if planet.planet in (PlanetEnum.RAHU, PlanetEnum.KETU):
-            if planet.planet == PlanetEnum.RAHU:
-                target_sign = Zodiac.AQUARIUS
-            else:
-                target_sign = Zodiac.SCORPIO
-
-            ruled_houses = [house_from_sign(lagna.sign, target_sign)]
-
-        if ruled_houses:
-            ruler_of = ", ".join([f"{h}" for h in ruled_houses]) + " Bhava"
+    # Add all planets in proper order
+    planet_order = [
+        Planet.SUN, Planet.MOON, Planet.MARS, Planet.MERCURY,
+        Planet.JUPITER, Planet.VENUS, Planet.SATURN, Planet.RAHU, Planet.KETU
+    ]
+    
+    for planet_enum in planet_order:
+        planet_pos = next((p for p in planets_data if p.planet == planet_enum), None)
+        if not planet_pos:
+            continue
+        
+        symbol = helper.get_planet_symbol(planet_pos.planet)
+        retrograde_symbol = "↺" if planet_pos.retrograde else ""
+        
+        nak_lord_name = helper.get_sanskrit_planet_name(planet_pos.nakshatra_lord) if planet_pos.nakshatra_lord else ""
+        sub_lord_name = helper.get_sanskrit_planet_name(planet_pos.sub_lord) if planet_pos.sub_lord else ""
+        lord_sub_lord = f"{nak_lord_name}, {sub_lord_name}" if nak_lord_name and sub_lord_name else "-"
+        
+        ruler_of = ", ".join([str(h) for h in planet_pos.ruler_of_houses]) if planet_pos.ruler_of_houses else "-"
+        
+        if not planet_pos.relationship:
+            rel_word = "-"
+        elif planet_pos.relationship == "Own House":
+            rel_word = "Own House"
+        elif planet_pos.relationship == "Friend":
+            rel_word = "Friend's House"
+        elif planet_pos.relationship == "Enemy":
+            rel_word = "Enemy's House"
         else:
-            ruler_of = "–"
-
-        is_in = f"{planet.is_in_house} Bhava" if hasattr(planet, 'is_in_house') and planet.is_in_house else "–"
-
-        sign_lord_name = vedic_helper.get_sanskrit_planet_name(planet.house_owner) if hasattr(planet, 'house_owner') and planet.house_owner else "N/A"
-
-        relationship = planet.relationship if hasattr(planet, 'relationship') else "Neutral"
-        if planet.planet == PlanetEnum.RAHU:
-            relationship = "Friend"
-        elif planet.planet == PlanetEnum.KETU:
-            relationship = "Neutral"
-
-        if relationship == "Friend":
-            relationship = "Friend's House"
-        elif relationship == "Enemy":
-            relationship = "Enemy's House"
-        elif relationship == "Own House":
-            relationship = "Own House"
-
-        dignities = planet.dignity if hasattr(planet, 'dignity') else "–"
-        if dignities == "-" or not dignities:
-            dignities = "–"
-
-        graha_row = {
-            "Graha": planet_display,
-            "Longitude": format_longitude(planet.longitude, planet.sign),
-            "Nakshatra (Pada)": nakshatra_display,
-            "Lord / Sub-Lord": lord_display,
+            rel_word = planet_pos.relationship
+        
+        graha_dict = {
+            "Graha": f"{symbol}{planet_pos.planet.name.title()}{retrograde_symbol}",
+            "Longitude": format_longitude_dms(planet_pos.longitude, planet_pos.sign),
+            "Nakshatra": f"{planet_pos.nakshatra.name.replace('_', ' ').title()} {planet_pos.nakshatra_pada}",
+            "Lord/Sub Lord": lord_sub_lord,
             "Ruler of": ruler_of,
-            "Is In (Bhava)": is_in,
-            "B. Owner": sign_lord_name,
-            "Relationship": relationship,
-            "Dignities": dignities,
+            "Is In": planet_pos.is_in_house if planet_pos.is_in_house else "-",
+            "B. Owner": helper.get_sanskrit_planet_name(planet_pos.house_owner) if planet_pos.house_owner else "-",
+            "Relationship": rel_word,
+            "Dignities": planet_pos.dignity if planet_pos.dignity else "-"
         }
-        graha_table.append(graha_row)
+        graha_table.append(graha_dict)
 
-    lagna_sign_eng = vedic_helper.get_sign_name(lagna.sign)
-    lagna_sign_sans = vedic_helper.get_sign_short_name(lagna.sign)
+    data_dict = {
+        "Ascendant (Lagna)": graha_table[0] if graha_table else {},
+        "Sun": graha_table[1] if len(graha_table) > 1 else {},
+        "Moon": graha_table[2] if len(graha_table) > 2 else {},
+        "Mars": graha_table[3] if len(graha_table) > 3 else {},
+        "Mercury": graha_table[4] if len(graha_table) > 4 else {},
+        "Jupiter": graha_table[5] if len(graha_table) > 5 else {},
+        "Venus": graha_table[6] if len(graha_table) > 6 else {},
+        "Saturn": graha_table[7] if len(graha_table) > 7 else {},
+        "Rahu": graha_table[8] if len(graha_table) > 8 else {},
+        "Ketu": graha_table[9] if len(graha_table) > 9 else {},
+        "ayanamsa": round(d8_data['ayanamsa'], 6)
+    }
 
     return {
         "status": "success",
-        "chart_type": "D8 (Ashtamsa)",
-        "description": d8_data.get("description", "Divisional chart for longevity, obstacles, and misfortunes"),
-        "lagna": {
-            "longitude": format_longitude(lagna.longitude, lagna.sign),
-            "sign": f"{lagna_sign_eng} ({lagna_sign_sans})",
-            "degree_in_sign": lagna.degree,
-        },
-        "ayanamsa": d8_data['ayanamsa'],
-        "graha_table": graha_table,
+        "chart_type": "D8 (Ashtamsha) - Divisional Chart for Longevity & Obstacles",
+        "data": data_dict
     }
