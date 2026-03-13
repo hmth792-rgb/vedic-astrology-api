@@ -23,7 +23,14 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Import route blueprints
-from routes import d1_bp, d2_bp, d3_bp, d4_bp, d5_bp, d6_bp, d7_bp, d8_bp, d9_bp, d10_bp, dasha_bp, transit_bp
+from routes import d1_bp, d2_bp, d3_bp, d4_bp, d5_bp, d6_bp, d7_bp, d8_bp, d9_bp, d10_bp, d11_bp, d12_bp, d16_bp, dasha_bp, transit_bp
+from routes.d20_routes import d20_routes
+from routes.d24_routes import d24_routes
+from routes.d27_routes import d27_routes
+from routes.d30_routes import d30_routes
+from routes.d40_routes import d40_routes
+from routes.d45_routes import d45_routes
+from routes.d60_routes import d60_routes
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -40,6 +47,16 @@ app.register_blueprint(d7_bp)
 app.register_blueprint(d8_bp)
 app.register_blueprint(d9_bp)
 app.register_blueprint(d10_bp)
+app.register_blueprint(d11_bp)
+app.register_blueprint(d12_bp)
+app.register_blueprint(d16_bp)
+app.register_blueprint(d20_routes)
+app.register_blueprint(d24_routes)
+app.register_blueprint(d27_routes)
+app.register_blueprint(d30_routes)
+app.register_blueprint(d40_routes)
+app.register_blueprint(d45_routes)
+app.register_blueprint(d60_routes)
 app.register_blueprint(dasha_bp)
 app.register_blueprint(transit_bp)
 
@@ -62,6 +79,13 @@ def home():
             "D8 (Ashtamsa) - Longevity & Obstacles",
             "D9 (Navamsha) - Marriage & Relationships",
             "D10 (Dasamsa) - Career & Profession",
+            "D20 (Vimshamsha) - Spiritual Progress",
+            "D24 (Chaturvimshamsha) - Education & Learning",
+            "D27 (Bhamsa) - Strengths & Weaknesses",
+            "D30 (Trimsamsha) - Misfortune & Suffering",
+            "D40 (Khavedamsha) - Maternal Lineage & Subtle Fortune",
+            "D45 (Akshavedamsha) - Character & Spiritual Merit",
+            "D60 (Shashtiamsha) - Past-Life Karma",
             "Dasha Periods - Mahadasha & Antardasha",
             "Planetary Transits - Current positions through houses"
         ],
@@ -76,6 +100,13 @@ def home():
             "D8 Refined": "/api/v1/d8-chart-refined (POST)",
             "D9 Refined": "/api/v1/d9-chart-refined (POST)",
             "D10 Refined": "/api/v1/d10-chart-refined (POST)",
+            "D20 Refined": "/api/v1/d20-chart-refined (POST)",
+            "D24 Refined": "/api/v1/d24-chart-refined (POST)",
+            "D27 Refined": "/api/v1/d27-chart-refined (POST)",
+            "D30 Refined": "/api/v1/d30-chart-refined (POST)",
+            "D40 Refined": "/api/v1/d40-chart-refined (POST)",
+            "D45 Refined": "/api/v1/d45-chart-refined (POST)",
+            "D60 Refined": "/api/v1/d60-chart-refined (POST)",
             "Dasha (Unified)": "/api/v1/dasha (POST) - year, month, day, or date range",
             "All Transits": "/api/v1/transits (POST) - Current positions of all major planets",
             "Major Transits": "/api/v1/transits/major (POST) - Saturn, Jupiter, Mercury only",
@@ -102,7 +133,7 @@ def api_documentation():
     return jsonify({
         "title": "Vedic Astrology Chart API Documentation",
         "version": "3.0.0",
-        "description": "API for calculating D1 (Rashi) through D10 (Dasamsa) divisional charts using Swiss Ephemeris",
+        "description": "API for calculating D1 through D60 selected divisional charts using Swiss Ephemeris",
         "request_format": {
             "name": "string (required) - Full name",
             "datetime": "string (required) - Birth date and time in ISO format (YYYY-MM-DDTHH:MM:SS)",

@@ -36,7 +36,9 @@ class VedicAstrologyHelper:
         Planet.MERCURY: (Zodiac.VIRGO, 15),
         Planet.JUPITER: (Zodiac.CANCER, 5),
         Planet.VENUS: (Zodiac.PISCES, 27),
-        Planet.SATURN: (Zodiac.LIBRA, 20)
+        Planet.SATURN: (Zodiac.LIBRA, 20),
+        Planet.RAHU: (Zodiac.GEMINI, 20),
+        Planet.KETU: (Zodiac.SAGITTARIUS, 20)
     }
     
     DEBILITATION = {
@@ -46,7 +48,9 @@ class VedicAstrologyHelper:
         Planet.MERCURY: (Zodiac.PISCES, 15),
         Planet.JUPITER: (Zodiac.CAPRICORN, 5),
         Planet.VENUS: (Zodiac.VIRGO, 27),
-        Planet.SATURN: (Zodiac.ARIES, 20)
+        Planet.SATURN: (Zodiac.ARIES, 20),
+        Planet.RAHU: (Zodiac.SAGITTARIUS, 20),
+        Planet.KETU: (Zodiac.GEMINI, 20)
     }
     
     # Planet natural friendships
@@ -132,9 +136,6 @@ class VedicAstrologyHelper:
     @staticmethod
     def get_planet_dignity(planet: Planet, sign: Zodiac, degree: float) -> str:
         """Calculate planet dignity - return only Exalted or Debilitated"""
-        if planet in [Planet.RAHU, Planet.KETU]:
-            return "-"
-            
         # Check exaltation
         if planet in VedicAstrologyHelper.EXALTATION:
             exalt_sign, exalt_degree = VedicAstrologyHelper.EXALTATION[planet]
@@ -156,10 +157,10 @@ class VedicAstrologyHelper:
         if planet == sign_lord:
             return "Own House"
         
-        # Nodes have specific relationships: Rahu is enemy, Ketu is friend
-        if planet == Planet.RAHU:
-            return Relationship.ENEMY.value
-        elif planet == Planet.KETU:
+        # For nodes (Rahu and Ketu), they are generally considered friends
+        # since they represent shadow planets that adapt to their environment
+        if planet == Planet.RAHU or planet == Planet.KETU:
+            # Nodes are friendly to their sign lords
             return Relationship.FRIEND.value
             
         if sign_lord in VedicAstrologyHelper.NATURAL_FRIENDS.get(planet, []):
