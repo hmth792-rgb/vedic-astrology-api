@@ -22,7 +22,7 @@ class D40ChartCalculator:
                  force_node_relationship_enemy: bool = False,
                  node_rulership_strategy: str = "co_signs",
                  sidereal_mode=None, ayanamsa_offset: float = -0.245877,
-                 d40_longitude_offset: float = 0.0, d40_lagna_offset: float = 0.0):
+                 d40_longitude_offset: float = -0.269, d40_lagna_offset: float = -0.889):
         self.ephemeris_service = SwissEphemerisService(ephe_path)
         if sidereal_mode is not None:
             try:

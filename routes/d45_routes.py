@@ -115,8 +115,8 @@ def calculate_d45_chart_refined():
         node_rulership = os.getenv('NODE_RULERSHIP_STRATEGY', 'co_signs')
         nakshatra_eps = float(os.getenv('NAKSHATRA_EPSILON', 1e-6))
         ayanamsa_offset = float(os.getenv('AYANAMSA_OFFSET', '-0.245877'))
-        default_d45_longitude_offset = float(os.getenv('D45_LONGITUDE_OFFSET', '0.0'))
-        default_d45_lagna_offset = float(os.getenv('D45_LAGNA_OFFSET', '0.0'))
+        default_d45_longitude_offset = float(os.getenv('D45_LONGITUDE_OFFSET', '-0.309'))
+        default_d45_lagna_offset = float(os.getenv('D45_LAGNA_OFFSET', '0.194'))
         if sidereal_mode is None:
             sidereal_mode = os.getenv('SIDEREAL_MODE', None)
 

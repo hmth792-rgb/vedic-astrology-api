@@ -22,7 +22,7 @@ class D45ChartCalculator:
                  force_node_relationship_enemy: bool = False,
                  node_rulership_strategy: str = "co_signs",
                  sidereal_mode=None, ayanamsa_offset: float = -0.245877,
-                 d45_longitude_offset: float = 0.0, d45_lagna_offset: float = 0.0):
+                 d45_longitude_offset: float = -0.309, d45_lagna_offset: float = 0.194):
         self.ephemeris_service = SwissEphemerisService(ephe_path)
         if sidereal_mode is not None:
             try:
@@ -210,7 +210,7 @@ class D45ChartCalculator:
 
         planet.is_in_house = planet_house.house_number if planet_house else None
         planet.house_owner = sign_lord
-        if planet.planet in (Planet.RAHU, Planet.KETU) and relationship == "Friend":
+        if planet.planet == Planet.KETU and relationship == "Friend":
             planet.relationship = "Neutral"
         else:
             planet.relationship = relationship

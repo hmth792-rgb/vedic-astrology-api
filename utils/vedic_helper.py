@@ -61,7 +61,9 @@ class VedicAstrologyHelper:
         Planet.MERCURY: [Planet.SUN, Planet.VENUS],
         Planet.JUPITER: [Planet.SUN, Planet.MOON, Planet.MARS],
         Planet.VENUS: [Planet.MERCURY, Planet.SATURN],
-        Planet.SATURN: [Planet.MERCURY, Planet.VENUS]
+        Planet.SATURN: [Planet.MERCURY, Planet.VENUS],
+        Planet.RAHU: [Planet.VENUS, Planet.SATURN, Planet.MERCURY],
+        Planet.KETU: [Planet.VENUS, Planet.SATURN, Planet.MERCURY]
     }
     
     NATURAL_ENEMIES = {
@@ -71,7 +73,9 @@ class VedicAstrologyHelper:
         Planet.MERCURY: [Planet.MOON],
         Planet.JUPITER: [Planet.MERCURY, Planet.VENUS],
         Planet.VENUS: [Planet.SUN, Planet.MOON],
-        Planet.SATURN: [Planet.SUN, Planet.MOON, Planet.MARS]
+        Planet.SATURN: [Planet.SUN, Planet.MOON, Planet.MARS],
+        Planet.RAHU: [Planet.SUN, Planet.MOON, Planet.MARS],
+        Planet.KETU: [Planet.SUN, Planet.MOON, Planet.MARS]
     }
     
     # Sign lords (rulers)
@@ -156,12 +160,6 @@ class VedicAstrologyHelper:
         """Get relationship between planet and sign lord"""
         if planet == sign_lord:
             return "Own House"
-        
-        # For nodes (Rahu and Ketu), they are generally considered friends
-        # since they represent shadow planets that adapt to their environment
-        if planet == Planet.RAHU or planet == Planet.KETU:
-            # Nodes are friendly to their sign lords
-            return Relationship.FRIEND.value
             
         if sign_lord in VedicAstrologyHelper.NATURAL_FRIENDS.get(planet, []):
             return Relationship.FRIEND.value

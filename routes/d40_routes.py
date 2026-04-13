@@ -115,8 +115,8 @@ def calculate_d40_chart_refined():
         node_rulership = os.getenv('NODE_RULERSHIP_STRATEGY', 'co_signs')
         nakshatra_eps = float(os.getenv('NAKSHATRA_EPSILON', 1e-6))
         ayanamsa_offset = float(os.getenv('AYANAMSA_OFFSET', '-0.245877'))
-        default_d40_longitude_offset = float(os.getenv('D40_LONGITUDE_OFFSET', '0.0'))
-        default_d40_lagna_offset = float(os.getenv('D40_LAGNA_OFFSET', '0.0'))
+        default_d40_longitude_offset = float(os.getenv('D40_LONGITUDE_OFFSET', '-0.269'))
+        default_d40_lagna_offset = float(os.getenv('D40_LAGNA_OFFSET', '-0.889'))
         if sidereal_mode is None:
             sidereal_mode = os.getenv('SIDEREAL_MODE', None)
 

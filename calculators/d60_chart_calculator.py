@@ -22,7 +22,8 @@ class D60ChartCalculator:
                  force_node_relationship_enemy: bool = False,
                  node_rulership_strategy: str = "co_signs",
                  sidereal_mode=None, ayanamsa_offset: float = -0.245877,
-                 d60_longitude_offset: float = 0.0, d60_lagna_offset: float = 0.0):
+                 d60_longitude_offset: float = -0.404, d60_lagna_offset: float = -1.334,
+                 d60_even_lagna_adjust: float = 2.183146):
         self.ephemeris_service = SwissEphemerisService(ephe_path)
         if sidereal_mode is not None:
             try:
@@ -35,6 +36,7 @@ class D60ChartCalculator:
         self.ayanamsa_offset = ayanamsa_offset
         self.d60_longitude_offset = d60_longitude_offset
         self.d60_lagna_offset = d60_lagna_offset
+        self.d60_even_lagna_adjust = d60_even_lagna_adjust
         self.node_ruler_override = node_ruler_override
         self.force_node_relationship_enemy = force_node_relationship_enemy
         self.node_rulership_strategy = node_rulership_strategy
@@ -107,7 +109,8 @@ class D60ChartCalculator:
         d60_sign_num = ((start_sign_num - 1 + portion - 1) % 12) + 1
         d60_degree = (d1_degree_in_sign * 60.0) % 30.0
         d60_longitude = (d60_sign_num - 1) * 30.0 + d60_degree
-        d60_longitude, d60_sign_num, d60_degree = self._apply_d60_corrections(d60_longitude, self.d60_lagna_offset)
+        lagna_offset = self._get_d60_lagna_offset(portion)
+        d60_longitude, d60_sign_num, d60_degree = self._apply_d60_corrections(d60_longitude, lagna_offset)
         nakshatra, pada = self.ephemeris_service.longitude_to_nakshatra(d60_longitude + self.nakshatra_epsilon)
 
         return PlanetPosition(
@@ -126,13 +129,20 @@ class D60ChartCalculator:
         )
 
     def _get_d60_start_sign(self, sign_num: int) -> int:
-        return Zodiac.ARIES.value if sign_num % 2 == 1 else Zodiac.LIBRA.value
+        # D60 (Shashtiamsha) here follows cyclic/parivritti mapping,
+        # i.e., count divisions from the same radix sign itself.
+        return sign_num
 
     def _apply_d60_corrections(self, longitude: float, offset: float) -> tuple:
         corrected = (longitude + offset) % 360.0
         sign_num = int(corrected / 30.0) + 1
         degree_in_sign = corrected % 30.0
         return corrected, sign_num, degree_in_sign
+
+    def _get_d60_lagna_offset(self, portion: int) -> float:
+        if portion > 30:
+            return self.d60_lagna_offset + self.d60_even_lagna_adjust
+        return self.d60_lagna_offset
 
     def _compute_drik_node_rulership(self, node: PlanetPosition, planets: List[PlanetPosition], houses: List[HouseData]) -> List[int]:
         if not node.nakshatra_lord:
@@ -206,10 +216,7 @@ class D60ChartCalculator:
 
         planet.is_in_house = planet_house.house_number if planet_house else None
         planet.house_owner = sign_lord
-        if planet.planet in (Planet.RAHU, Planet.KETU) and relationship == "Friend":
-            planet.relationship = "Neutral"
-        else:
-            planet.relationship = relationship
+        planet.relationship = relationship
         planet.dignity = dignity if dignity and dignity != "-" else "-"
         planet.ruler_of_houses = sorted(ruled_houses)
         return planet
